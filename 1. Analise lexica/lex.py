@@ -171,13 +171,13 @@ def define_column(input, lexpos):
 
 def t_error(token):
 
-    file = token.lexer.filename
-    line = token.lineno
-    column = define_column(token.lexer.backup_data, token.lexpos)
+    # file = token.lexer.filename
+    # line = token.lineno
+    # column = define_column(token.lexer.backup_data, token.lexpos)
     message = "Caracter inválido '%s'" % token.value[0]
 
-    print(f"[{file}]:[{line},{column}]: {message}.")
-    # print(message)
+    # print(f"[{file}]:[{line},{column}]: {message}.")
+    print(message)
 
     token.lexer.skip(1)
 
@@ -185,6 +185,8 @@ def t_error(token):
 
 
 def main():
+    detailed = True
+
     aux = argv[1].split('.')
     if aux[-1] != 'tpp':
       raise IOError("Not a .tpp file!")
@@ -198,8 +200,12 @@ def main():
       tok = lexer.token()
       if not tok:
         break      # No more input
+
+      if detailed:
+        print(tok)
+      else:
+        print(tok.type)
       #print(tok)
-      print(tok.type)
       #print(tok.value)
 
 def test(pdata):
