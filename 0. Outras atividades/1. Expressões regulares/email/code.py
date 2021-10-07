@@ -6,7 +6,7 @@ arq = open('e-mails.txt', 'r')
 # lista com os e-mails
 emails = []
 
-# para cada linha do arquivo, a expressão irá pegar epans o e-mail
+# para cada linha do arquivo, a expressão irá pegar apenas o e-mail
 for email in arq:
        emails.append(re.findall(r'(?<=<)(.*?)(?=>)', email))
 
