@@ -185,7 +185,7 @@ def t_error(token):
 
 
 def main():
-    detailed = True
+    detailed = False
 
     aux = argv[1].split('.')
     if aux[-1] != 'tpp':

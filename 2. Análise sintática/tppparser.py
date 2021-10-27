@@ -1,34 +1,23 @@
 from sys import argv, exit
-
-import logging
-
-logging.basicConfig(
-     level = logging.DEBUG,
-     filename = "log-parser.txt",
-     filemode = "w",
-     format = "%(filename)10s:%(lineno)4d:%(message)s"
-)
-log = logging.getLogger()
-
-
 import ply.yacc as yacc
- 
-# Get the token map from the lexer.  This is required.
-from tpplex import tokens,log
-
+from lex import tokens,log
 from mytree import MyNode
 from anytree.exporter import DotExporter, UniqueDotExporter
 from anytree import RenderTree, AsciiStyle
+import logging
 
-# Sub-árvore.
-#       (programa)
-#           |
-#   (lista_declaracoes)
-#     /     |      \
-#   ...    ...     ...
+logging.basicConfig(
+    level = logging.DEBUG,
+    filename = "log-parser.txt",
+    filemode = "w",
+    format = "%(filename)10s:%(lineno)4d:%(message)s"
+)
+
+log = logging.getLogger()
 
 def p_programa(p):
-    """programa : lista_declaracoes"""
+    '''programa : lista_declaracoes
+    '''
 
     global root
 
@@ -38,15 +27,11 @@ def p_programa(p):
     p[0] = programa
     p[1].parent = programa
 
-#    (lista_declaracoes)                          (lista_declaracoes)
-#          /           \                                    |
-# (lista_declaracoes)  (declaracao)                    (declaracao)
-
-
 def p_lista_declaracoes(p):
-    """lista_declaracoes : lista_declaracoes declaracao
-                        | declaracao
-    """
+    '''lista_declaracoes : lista_declaracoes declaracao
+        | declaracao
+    '''
+
     pai = MyNode(name='lista_declaracoes', type='LISTA_DECLARACOES')
     p[0] = pai
     p[1].parent = pai
@@ -54,33 +39,19 @@ def p_lista_declaracoes(p):
     if len(p) > 2:
         p[2].parent = pai
 
-# Sub-árvore.
-#      (declaracao)
-#           |
-#  (declaracao_variaveis ou
-#   inicializacao_variaveis ou
-#   declaracao_funcao)
-
-
 def p_declaracao(p):
-    """declaracao : declaracao_variaveis
-                | inicializacao_variaveis
-                | declaracao_funcao
-    """
+    '''declaracao : declaracao_variaveis
+        | inicializacao_variaveis
+        | declaracao_funcao
+    '''
+
     pai = MyNode(name='declaracao', type='DECLARACAO')
     p[0] = pai
     p[1].parent = pai
 
-# Sub-árvore.
-#      (declaracao_variaveis)
-#      / p[1]    |           \
-# (tipo)    (DOIS_PONTOS)    (lista_variaveis)
-#                |
-#               (:)
-
-
 def p_declaracao_variaveis(p):
-    """declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis"""
+    '''declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis
+    '''
 
     pai = MyNode(name='declaracao_variaveis', type='DECLARACAO_VARIAVEIS')
     p[0] = pai
@@ -93,25 +64,20 @@ def p_declaracao_variaveis(p):
 
     p[3].parent = pai
 
-# Sub-árvore.
-#   (inicializacao_variaveis)
-#              |
-#         (atribuicao)
-
-
 def p_inicializacao_variaveis(p):
-    """inicializacao_variaveis : atribuicao"""
+    '''inicializacao_variaveis : atribuicao
+    '''
 
     pai = MyNode(name='inicializacao_variaveis',
                  type='INICIALIZACAO_VARIAVEIS')
     p[0] = pai
     p[1].parent = pai
 
-
 def p_lista_variaveis(p):
-    """lista_variaveis : lista_variaveis VIRGULA var
-                        | var
-    """
+    '''lista_variaveis : VIRGULA var
+        | var
+    '''
+
     pai = MyNode(name='lista_variaveis', type='LISTA_VARIAVEIS')
     p[0] = pai
     if len(p) > 2:
@@ -122,11 +88,10 @@ def p_lista_variaveis(p):
     else:
        p[1].parent = pai
 
-
 def p_var(p):
-    """var : ID
-            | ID indice
-    """
+    '''var : ID
+        | ID indice
+    '''
 
     pai = MyNode(name='var', type='VAR')
     p[0] = pai
@@ -136,11 +101,11 @@ def p_var(p):
     if len(p) > 2:
         p[2].parent = pai
 
-
 def p_indice(p):
-    """indice : indice ABRE_COLCHETE expressao FECHA_COLCHETE
-                | ABRE_COLCHETE expressao FECHA_COLCHETE
-    """
+    '''indice : indice ABRE_COLCHETE expressao FECHA_COLCHETE
+        | ABRE_COLCHETE expressao FECHA_COLCHETE
+    '''
+
     pai = MyNode(name='indice', type='INDICE')
     p[0] = pai
     if len(p) == 5:
@@ -166,11 +131,10 @@ def p_indice(p):
         filho_sym3 = MyNode(name=p[3], type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
-
 def p_indice_error(p):
-    """indice : ABRE_COLCHETE error FECHA_COLCHETE
-                | indice ABRE_COLCHETE error FECHA_COLCHETE
-    """
+    '''indice : ABRE_COLCHETE error FECHA_COLCHETE
+        | indice ABRE_COLCHETE error FECHA_COLCHETE
+    '''
 
     print("Erro na definicao do indice. Expressao ou indice.")
 
@@ -182,25 +146,11 @@ def p_indice_error(p):
         "Syntax error parsing index rule at line {}".format(error_line))
     parser.errok()
     p[0] = father
-    # if len(p) == 4:
-    #     p[1] = new_node('ABRECOLCHETES', father)
-    #     p[2].parent = father
-    #     p[3] = new_node('FECHACOLCHETES', father)
-    # else:
-    #     p[1].parent = father
-    #     p[2] = new_node('ABRECOLCHETES', father)
-    #     p[3].parent = father
-    #     p[4] = new_node('FECHACOLCHETES', father)
 
-
-# Sub-árvore:
-#    (tipo)
-#      |
-#  (FLUTUANTE)
 def p_tipo(p):
-    """tipo : INTEIRO
+    '''tipo : INTEIRO
         | FLUTUANTE
-    """
+    '''
 
     pai = MyNode(name='tipo', type='TIPO')
     p[0] = pai
@@ -214,11 +164,11 @@ def p_tipo(p):
         filho1 = MyNode(name='FLUTUANTE', type='FLUTUANTE', parent=pai)
         filho_sym = MyNode(name=p[1], type=p[1].upper(), parent=filho1)
 
-
 def p_declaracao_funcao(p):
-    """declaracao_funcao : tipo cabecalho 
-                        | cabecalho 
-    """
+    '''declaracao_funcao : tipo cabecalho 
+        | cabecalho 
+    '''
+
     pai = MyNode(name='declaracao_funcao', type='DECLARACAO_FUNCAO')
     p[0] = pai
     p[1].parent = pai
@@ -226,9 +176,9 @@ def p_declaracao_funcao(p):
     if len(p) == 3:
         p[2].parent = pai
 
-
 def p_cabecalho(p):
-    """cabecalho : ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM"""
+    '''cabecalho : ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM
+    '''
 
     pai = MyNode(name='cabecalho', type='CABECALHO')
     p[0] = pai
@@ -253,18 +203,17 @@ def p_cabecalho(p):
     filho_id = MyNode(name='fim', type='FIM', parent=filho6)
     p[6] = filho6
 
-
 def p_cabecalho_error(p):
-    """cabecalho : ID ABRE_PARENTESE error FECHA_PARENTESE corpo FIM
-                | ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE error FIM
-                | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
-    """
+    '''cabecalho : ID ABRE_PARENTESE error FECHA_PARENTESE corpo FIM
+        | ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE error FIM
+        | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
+    '''
 
 def p_lista_parametros(p):
-    """lista_parametros : lista_parametros VIRGULA parametro
-                    | parametro
-                    | vazio
-    """
+    '''lista_parametros : lista_parametros VIRGULA parametro
+        | parametro
+        | vazio
+    '''
 
     pai = MyNode(name='lista_parametros', type='LISTA_PARAMETROS')
     p[0] = pai
@@ -276,11 +225,10 @@ def p_lista_parametros(p):
         p[2] = filho2
         p[3].parent = pai
 
-
 def p_parametro(p):
-    """parametro : tipo DOIS_PONTOS ID
-                | parametro ABRE_COLCHETE FECHA_COLCHETE
-    """
+    '''parametro : tipo DOIS_PONTOS ID
+        | parametro ABRE_COLCHETE FECHA_COLCHETE
+    '''
 
     pai = MyNode(name='parametro', type='PARAMETRO')
     p[0] = pai
@@ -302,19 +250,17 @@ def p_parametro(p):
         filho_sym3 = MyNode(name=']', type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
-
 def p_parametro_error(p):
-    """parametro : tipo error ID
-                | error ID
-                | parametro error FECHA_COLCHETE
-                | parametro ABRE_COLCHETE error
-    """
-
+    '''parametro : tipo error ID
+        | error ID
+        | parametro error FECHA_COLCHETE
+        | parametro ABRE_COLCHETE error
+    '''
 
 def p_corpo(p):
-    """corpo : corpo acao
-            | vazio
-    """
+    '''corpo : corpo acao
+        | vazio
+    '''
 
     pai = MyNode(name='corpo', type='CORPO')
     p[0] = pai
@@ -323,34 +269,25 @@ def p_corpo(p):
     if len(p) > 2:
         p[2].parent = pai
 
-
 def p_acao(p):
-    """acao : expressao
+    '''acao : expressao
         | declaracao_variaveis
         | se
         | repita
         | leia
         | escreva
         | retorna
-    """
+    '''
+
     pai = MyNode(name='acao', type='ACAO')
     p[0] = pai
     p[1].parent = pai
 
 
-
-# Sub-árvore:
-#       ________ (se) ________________________________
-#      /    /          \      \         \      \      \
-# (SE) (expressao)  (ENTAO)  (corpo) (SENAO) (corpo) (FIM)
-#  |       |           |
-# (se)   (...)      (então) ....
-
-
 def p_se(p):
-    """se : SE expressao ENTAO corpo FIM
-          | SE expressao ENTAO corpo SENAO corpo FIM
-    """
+    '''se : SE expressao ENTAO corpo FIM
+        | SE expressao ENTAO corpo SENAO corpo FIM
+    '''
 
     pai = MyNode(name='se', type='SE')
     p[0] = pai
@@ -382,19 +319,18 @@ def p_se(p):
         filho_fim = MyNode(name=p[5], type='FIM', parent=filho5)
         p[5] = filho5
 
-
 def p_se_error(p):
-    """se : error expressao ENTAO corpo FIM
+    '''se : error expressao ENTAO corpo FIM
         | SE expressao error corpo FIM
         | error expressao ENTAO corpo SENAO corpo FIM
         | SE expressao error corpo SENAO corpo FIM
         | SE expressao ENTAO corpo error corpo FIM
         | SE expressao ENTAO corpo SENAO corpo
-    """
-
+    '''
 
 def p_repita(p):
-    """repita : REPITA corpo ATE expressao"""
+    '''repita : REPITA corpo ATE expressao
+    '''
 
     pai = MyNode(name='repita', type='REPITA')
     p[0] = pai
@@ -411,14 +347,14 @@ def p_repita(p):
 
     p[4].parent = pai   # expressao.
 
-
 def p_repita_error(p):
-    """repita : error corpo ATE expressao
-            | REPITA corpo error expressao
-    """
+    '''repita : error corpo ATE expressao
+        | REPITA corpo error expressao
+    '''
 
 def p_atribuicao(p):
-    """atribuicao : var ATRIBUICAO expressao"""
+    '''atribuicao : var ATRIBUICAO expressao
+    '''
 
     pai = MyNode(name='atribuicao', type='ATRIBUICAO')
     p[0] = pai
@@ -431,9 +367,9 @@ def p_atribuicao(p):
 
     p[3].parent = pai
 
-
 def p_leia(p):
-    """leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE"""
+    '''leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE
+    '''
 
     pai = MyNode(name='leia', type='LEIA')
     p[0] = pai
@@ -452,14 +388,15 @@ def p_leia(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-
 def p_leia_error(p):
-    """leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
-    """
+    '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
+    '''
 
+    print('leiaaaa')
 
 def p_escreva(p):
-    """escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE"""
+    '''escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE
+    '''
 
     pai = MyNode(name='escreva', type='ESCREVA')
     p[0] = pai
@@ -478,9 +415,9 @@ def p_escreva(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-
 def p_retorna(p):
-    """retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE"""
+    '''retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE
+    '''
 
     pai = MyNode(name='retorna', type='RETORNA')
     p[0] = pai
@@ -499,20 +436,20 @@ def p_retorna(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-
 def p_expressao(p):
-    """expressao : expressao_logica
-                    | atribuicao
-    """
+    '''expressao : expressao_logica
+        | atribuicao
+    '''
+
     pai = MyNode(name='expressao', type='EXPRESSAO')
     p[0] = pai
     p[1].parent = pai
 
-
 def p_expressao_logica(p):
-    """expressao_logica : expressao_simples
-                    | expressao_logica operador_logico expressao_simples
-    """
+    '''expressao_logica : expressao_simples
+        | expressao_logica operador_logico expressao_simples
+    '''
+
     pai = MyNode(name='expressao_logica', type='EXPRESSAO_LOGICA')
     p[0] = pai
     p[1].parent = pai
@@ -521,11 +458,10 @@ def p_expressao_logica(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_simples(p):
-    """expressao_simples : expressao_aditiva
-                        | expressao_simples operador_relacional expressao_aditiva
-    """
+    '''expressao_simples : expressao_aditiva
+        | expressao_simples operador_relacional expressao_aditiva
+    '''
 
     pai = MyNode(name='expressao_simples', type='EXPRESSAO_SIMPLES')
     p[0] = pai
@@ -535,11 +471,10 @@ def p_expressao_simples(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_aditiva(p):
-    """expressao_aditiva : expressao_multiplicativa
-                        | expressao_aditiva operador_soma expressao_multiplicativa
-    """
+    '''expressao_aditiva : expressao_multiplicativa
+        | expressao_aditiva operador_soma expressao_multiplicativa
+    '''
 
     pai = MyNode(name='expressao_aditiva', type='EXPRESSAO_ADITIVA')
     p[0] = pai
@@ -549,11 +484,10 @@ def p_expressao_aditiva(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_multiplicativa(p):
-    """expressao_multiplicativa : expressao_unaria
-                               | expressao_multiplicativa operador_multiplicacao expressao_unaria
-        """
+    '''expressao_multiplicativa : expressao_unaria
+        | expressao_multiplicativa operador_multiplicacao expressao_unaria
+    '''
 
     pai = MyNode(name='expressao_multiplicativa',
                  type='EXPRESSAO_MULTIPLICATIVA')
@@ -564,12 +498,12 @@ def p_expressao_multiplicativa(p):
         p[2].parent = pai
         p[3].parent = pai
 
-
 def p_expressao_unaria(p):
-    """expressao_unaria : fator
-                        | operador_soma fator
-                        | operador_negacao fator
-        """
+    '''expressao_unaria : fator
+        | operador_soma fator
+        | operador_negacao fator
+    '''
+
     pai = MyNode(name='expressao_unaria', type='EXPRESSAO_UNARIA')
     p[0] = pai
     p[1].parent = pai
@@ -585,15 +519,15 @@ def p_expressao_unaria(p):
     if len(p) > 2:
         p[2].parent = pai
 
-
 def p_operador_relacional(p):
-    """operador_relacional : MENOR
-                            | MAIOR
-                            | IGUAL
-                            | DIFERENTE 
-                            | MENOR_IGUAL
-                            | MAIOR_IGUAL
-    """
+    '''operador_relacional : MENOR
+        | MAIOR
+        | IGUAL
+        | DIFERENCA 
+        | MENOR_IGUAL
+        | MAIOR_IGUAL
+    '''
+
     pai = MyNode(name='operador_relacional', type='OPERADOR_RELACIONAL')
     p[0] = pai
 
@@ -607,7 +541,7 @@ def p_operador_relacional(p):
         filho = MyNode(name='IGUAL', type='IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     elif p[1] == "<>":
-        filho = MyNode(name='DIFERENTE', type='DIFERENTE', parent=pai)
+        filho = MyNode(name='DIFERENCA', type='DIFERENCA', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     elif p[1] == "<=":
         filho = MyNode(name='MENOR_IGUAL', type='MENOR_IGUAL', parent=pai)
@@ -620,11 +554,11 @@ def p_operador_relacional(p):
 
     p[1] = filho
 
-
 def p_operador_soma(p):
-    """operador_soma : MAIS
-                    | MENOS
-    """
+    '''operador_soma : MAIS
+        | MENOS
+    '''
+
     if p[1] == "+":
         mais = MyNode(name='MAIS', type='MAIS')
         mais_lexema = MyNode(name='+', type='SIMBOLO', parent=mais)
@@ -636,55 +570,55 @@ def p_operador_soma(p):
        p[0] = MyNode(name='operador_soma',
                      type='OPERADOR_SOMA', children=[menos])
 
-
 def p_operador_logico(p):
-    """operador_logico : E
-                    | OU
-    """
+    '''operador_logico : E_LOGICO
+        | OU_LOGICO
+    '''
+
     if p[1] == "&&":
-        filho = MyNode(name='E', type='E')
+        filho = MyNode(name='E_LOGICO', type='E_LOGICO')
         filho_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_logico',
                       type='OPERADOR_LOGICO', children=[filho])
     else:
-        filho = MyNode(name='OU', type='OU')
+        filho = MyNode(name='OU_LOGICO', type='OU_LOGICO')
         filho_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_logico',
                       type='OPERADOR_SOMA', children=[filho])
 
-
 def p_operador_negacao(p):
-    """operador_negacao : NAO"""
+    '''operador_negacao : NEGACAO
+    '''
 
     if p[1] == "!":
-        filho = MyNode(name='NAO', type='NAO')
+        filho = MyNode(name='NEGACAO', type='NEGACAO')
         negacao_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_negacao',
                       type='OPERADOR_NEGACAO', children=[filho])
 
-
 def p_operador_multiplicacao(p):
-    """operador_multiplicacao : VEZES
-                            | DIVIDE
-        """
+    '''operador_multiplicacao : MULTIPLICACAO
+        | DIVISAO
+    '''
+
     if p[1] == "*":
-        filho = MyNode(name='VEZES', type='VEZES')
+        filho = MyNode(name='MULTIPLICACAO', type='MULTIPLICACAO')
         vezes_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_multiplicacao',
                       type='OPERADOR_MULTIPLICACAO', children=[filho])
     else:
-       divide = MyNode(name='DIVIDE', type='DIVIDE')
+       divide = MyNode(name='DIVISAO', type='DIVISAO')
        divide_lexema = MyNode(name=p[1], type='SIMBOLO', parent=divide)
        p[0] = MyNode(name='operador_multiplicacao',
                      type='OPERADOR_MULTIPLICACAO', children=[divide])
 
-
 def p_fator(p):
-    """fator : ABRE_PARENTESE expressao FECHA_PARENTESE
-            | var
-            | chamada_funcao
-            | numero
-        """
+    '''fator : ABRE_PARENTESE expressao FECHA_PARENTESE
+        | var
+        | chamada_funcao
+        | numero
+    '''
+
     pai = MyNode(name='fator', type='FATOR')
     p[0] = pai
     if len(p) > 2:
@@ -700,16 +634,17 @@ def p_fator(p):
     else:
         p[1].parent = pai
 
-
 def p_fator_error(p):
-    """fator : ABRE_PARENTESE error FECHA_PARENTESE
-        """
+    '''fator : ABRE_PARENTESE error FECHA_PARENTESE
+    '''
+
+    print("Erro no fator.")
 
 def p_numero(p):
-    """numero : NUM_INTEIRO
-                | NUM_PONTO_FLUTUANTE
-                | NUM_NOTACAO_CIENTIFICA
-    """
+    '''numero : NUM_INTEIRO
+        | NUM_PONTO_FLUTUANTE
+        | NUM_NOTACAO_CIENTIFICA
+    '''
 
     pai = MyNode(name='numero', type='NUMERO')
     p[0] = pai
@@ -729,9 +664,9 @@ def p_numero(p):
         aux_val = MyNode(name=p[1], type='VALOR', parent=aux)
         p[1] = aux
 
-
 def p_chamada_funcao(p):
-    """chamada_funcao : ID ABRE_PARENTESE lista_argumentos FECHA_PARENTESE"""
+    '''chamada_funcao : ID ABRE_PARENTESE lista_argumentos FECHA_PARENTESE
+    '''
 
     pai = MyNode(name='chamada_funcao', type='CHAMADA_FUNCAO')
     p[0] = pai
@@ -752,12 +687,12 @@ def p_chamada_funcao(p):
     else:
         p[1].parent = pai
 
-
 def p_lista_argumentos(p):
-    """lista_argumentos : lista_argumentos VIRGULA expressao
-                    | expressao
-                    | vazio
-        """
+    '''lista_argumentos : lista_argumentos VIRGULA expressao
+        | expressao
+        | vazio
+    '''
+
     pai = MyNode(name='lista_argumentos', type='LISTA_ARGUMENTOS')
     p[0] = pai
 
@@ -772,23 +707,18 @@ def p_lista_argumentos(p):
     else:
         p[1].parent = pai
 
-
 def p_vazio(p):
-    """vazio : """
+    '''vazio : 
+    '''
 
     pai = MyNode(name='vazio', type='VAZIO')
     p[0] = pai
 
-
 def p_error(p):
-
     if p:
         token = p
         print("Erro:[{line},{column}]: Erro próximo ao token '{token}'".format(
             line=token.lineno, column=token.lineno, token=token.value))
-
-# Programa principal.
-
 
 def main():
     # argv[1] = 'teste.tpp'
@@ -801,7 +731,7 @@ def main():
     parser.parse(source_file)
 
     if root and root.children != ():
-        print("Generating Syntax Tree Graph...")
+        print("Generating Syntax Tree Graph...\n")
         DotExporter(root).to_picture(argv[1] + ".ast.png")
         UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
         DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
