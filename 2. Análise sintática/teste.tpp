@@ -1,5 +1,4 @@
-inteiro funcao_teste()
-  leia(funcao_teste())
+inteiro funcao_teste(inteiro: n)
   se (x > y) então
     se (y < x) então
       retorna(x + y)
