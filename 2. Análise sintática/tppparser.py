@@ -18,7 +18,6 @@ log = logging.getLogger()
 def p_programa(p):
     '''programa : lista_declaracoes
     '''
-
     global root
 
     programa = MyNode(name='programa', type='PROGRAMA')
@@ -203,11 +202,23 @@ def p_cabecalho(p):
     filho_id = MyNode(name='fim', type='FIM', parent=filho6)
     p[6] = filho6
 
+# erro-004
 def p_cabecalho_error(p):
     '''cabecalho : ID ABRE_PARENTESE error FECHA_PARENTESE corpo FIM
         | ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE error FIM
         | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
     '''
+
+    print("Erro na definicao do cabecalho. Lista de parametros, corpo ou id.")
+
+    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}, p[5]:{p5}".format(
+        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4], p5=p[5]))
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
 
 def p_lista_parametros(p):
     '''lista_parametros : lista_parametros VIRGULA parametro
@@ -250,12 +261,24 @@ def p_parametro(p):
         filho_sym3 = MyNode(name=']', type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
+# erro-006
 def p_parametro_error(p):
     '''parametro : tipo error ID
         | error ID
         | parametro error FECHA_COLCHETE
         | parametro ABRE_COLCHETE error
     '''
+
+    print("Erro na definicao do parametro. Tipo ou parametro.")
+
+    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}".format(
+        p0=p[0], p1=p[1], p2=p[2]))
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
 
 def p_corpo(p):
     '''corpo : corpo acao
@@ -319,6 +342,7 @@ def p_se(p):
         filho_fim = MyNode(name=p[5], type='FIM', parent=filho5)
         p[5] = filho5
 
+# Busca_Linear_10...
 def p_se_error(p):
     '''se : error expressao ENTAO corpo FIM
         | SE expressao error corpo FIM
@@ -327,6 +351,20 @@ def p_se_error(p):
         | SE expressao ENTAO corpo error corpo FIM
         | SE expressao ENTAO corpo SENAO corpo
     '''
+
+    print("Erro de definicao SE. Expressao ou corpo.")
+
+    print("Erro:", end='')
+    for i in range(len(p)):
+        print("p[{}]:{}".format(i, p[i]), end=' ')
+
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
+
 
 def p_repita(p):
     '''repita : REPITA corpo ATE expressao
@@ -347,10 +385,24 @@ def p_repita(p):
 
     p[4].parent = pai   # expressao.
 
+# Busca_Linear_11...
 def p_repita_error(p):
     '''repita : error corpo ATE expressao
         | REPITA corpo error expressao
     '''
+
+    print("Erro de definicao REPITA. Expressao ou corpo.")
+
+    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}".format(
+        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4]))
+
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
+
 
 def p_atribuicao(p):
     '''atribuicao : var ATRIBUICAO expressao
@@ -392,7 +444,17 @@ def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
-    print('leiaaaa')
+    print("Erro de definicao LEIA. Var.", len(p))
+
+    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}".format(
+        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4], p5=p[5]))
+
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
 
 def p_escreva(p):
     '''escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -721,6 +783,10 @@ def p_error(p):
             line=token.lineno, column=token.lineno, token=token.value))
 
 def main():
+    global parser, root
+
+    root = None
+    
     # argv[1] = 'teste.tpp'
     aux = argv[1].split('.')
     if aux[-1] != 'tpp':
@@ -728,10 +794,14 @@ def main():
     data = open(argv[1])
 
     source_file = data.read()
+
+    parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
+                   debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
+                   
     parser.parse(source_file)
 
     if root and root.children != ():
-        print("Generating Syntax Tree Graph...\n")
+        print("\nGenerating Syntax Tree Graph...\n")
         DotExporter(root).to_picture(argv[1] + ".ast.png")
         UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
         DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
@@ -749,13 +819,11 @@ def main():
 
     else:
         print("Unable to generate Syntax Tree.")
-    print('\n\n')
+
+    print('\n')
 
 # Build the parser.
 # __file__ = "02-compiladores-analise-sintatica-tppparser.ipynb"
 # parser = yacc.yacc(optimize=True, start='programa', debug=True, debuglog=log)
-parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
-                   debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
-
 if __name__ == "__main__":
     main()
