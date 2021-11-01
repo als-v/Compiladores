@@ -15,6 +15,19 @@ logging.basicConfig(
 
 log = logging.getLogger()
 
+def mostrar_erro(p):
+    print("Erro:", end='')
+    for i in range(len(p)):
+        print("p[{}]:{}".format(i, p[i]), end='   ')
+    print()
+
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
+
 def p_programa(p):
     '''programa : lista_declaracoes
     '''
@@ -137,14 +150,7 @@ def p_indice_error(p):
 
     print("Erro na definicao do indice. Expressao ou indice.")
 
-    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}".format(
-        p0=p[0], p1=p[1], p2=p[2], p3=p[3]))
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
+    mostrar_erro(p)
 
 def p_tipo(p):
     '''tipo : INTEIRO
@@ -211,14 +217,7 @@ def p_cabecalho_error(p):
 
     print("Erro na definicao do cabecalho. Lista de parametros, corpo ou id.")
 
-    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}, p[5]:{p5}".format(
-        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4], p5=p[5]))
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
+    mostrar_erro(p)
 
 def p_lista_parametros(p):
     '''lista_parametros : lista_parametros VIRGULA parametro
@@ -271,14 +270,7 @@ def p_parametro_error(p):
 
     print("Erro na definicao do parametro. Tipo ou parametro.")
 
-    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}".format(
-        p0=p[0], p1=p[1], p2=p[2]))
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
+    mostrar_erro(p)
 
 def p_corpo(p):
     '''corpo : corpo acao
@@ -354,17 +346,7 @@ def p_se_error(p):
 
     print("Erro de definicao SE. Expressao ou corpo.")
 
-    print("Erro:", end='')
-    for i in range(len(p)):
-        print("p[{}]:{}".format(i, p[i]), end=' ')
-
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
-
+    mostrar_erro(p)
 
 def p_repita(p):
     '''repita : REPITA corpo ATE expressao
@@ -393,16 +375,7 @@ def p_repita_error(p):
 
     print("Erro de definicao REPITA. Expressao ou corpo.")
 
-    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}".format(
-        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4]))
-
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
-
+    mostrar_erro(p)
 
 def p_atribuicao(p):
     '''atribuicao : var ATRIBUICAO expressao
@@ -444,17 +417,9 @@ def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
-    print("Erro de definicao LEIA. Var.", len(p))
+    print("Erro de definicao LEIA. Var.")
 
-    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}, p[4]:{p4}".format(
-        p0=p[0], p1=p[1], p2=p[2], p3=p[3], p4=p[4], p5=p[5]))
-
-    error_line = p.lineno(2)
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
-    parser.errok()
-    p[0] = father
+    mostrar_erro(p)
 
 def p_escreva(p):
     '''escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -700,7 +665,7 @@ def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
-    print("Erro no fator.")
+    mostrar_erro(p)
 
 def p_numero(p):
     '''numero : NUM_INTEIRO
@@ -779,7 +744,7 @@ def p_vazio(p):
 def p_error(p):
     if p:
         token = p
-        print("Erro:[{line},{column}]: Erro próximo ao token '{token}'".format(
+        print("\nErro:[{line},{column}]: Erro próximo ao token '{token}'".format(
             line=token.lineno, column=token.lineno, token=token.value))
 
 def main():
@@ -818,7 +783,7 @@ def main():
         # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
 
     else:
-        print("Unable to generate Syntax Tree.")
+        print("\nError: unable to generate Syntax Tree.")
 
     print('\n')
 
