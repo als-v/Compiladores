@@ -762,7 +762,7 @@ def main():
 
     parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
                    debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
-    print()
+    
     parser.parse(source_file)
 
     if root and root.children != ():
