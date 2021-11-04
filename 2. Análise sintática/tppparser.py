@@ -755,7 +755,7 @@ def main():
     data = open(argv[1])
 
     if len(argv) == 3:
-        if argv[2].upper() == 'DETAILED':
+        if argv[2] == 'd':
             detailedLogs = True
 
     source_file = data.read()
