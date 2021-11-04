@@ -149,7 +149,6 @@ def p_indice_error(p):
     '''
 
     print("Erro na definicao do indice. Expressao ou indice.")
-
     mostrar_erro(p)
 
 def p_tipo(p):
@@ -216,7 +215,6 @@ def p_cabecalho_error(p):
     '''
 
     print("Erro na definicao do cabecalho. Lista de parametros, corpo ou id.")
-
     mostrar_erro(p)
 
 def p_lista_parametros(p):
@@ -269,7 +267,6 @@ def p_parametro_error(p):
     '''
 
     print("Erro na definicao do parametro. Tipo ou parametro.")
-
     mostrar_erro(p)
 
 def p_corpo(p):
@@ -345,7 +342,6 @@ def p_se_error(p):
     '''
 
     print("Erro de definicao SE. Expressao ou corpo.")
-
     mostrar_erro(p)
 
 def p_repita(p):
@@ -374,7 +370,6 @@ def p_repita_error(p):
     '''
 
     print("Erro de definicao REPITA. Expressao ou corpo.")
-
     mostrar_erro(p)
 
 def p_atribuicao(p):
@@ -418,7 +413,6 @@ def p_leia_error(p):
     '''
 
     print("Erro de definicao LEIA. Var.")
-
     mostrar_erro(p)
 
 def p_escreva(p):
@@ -664,7 +658,7 @@ def p_fator(p):
 def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
-
+    print("Erro de definicao do fator.")
     mostrar_erro(p)
 
 def p_numero(p):
