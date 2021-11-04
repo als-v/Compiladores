@@ -1,19 +1,7 @@
-inteiro funcao_teste(inteiro: n)
-  se (x > y) então
-    se (y < x) então
-      retorna(x + y)
-    senão
-        se (1 > 2) então
-          retorna(x + y)
-        fim
-      retorna(x - y)
-    fim
-  senão
-    se (x > x) então
-      retorna(x * y)
-    senão
-      retorna(x / y)
-    fim
-  fim
-  retorna(res)
+inteiro: n1
+inteiro: n2
+
+inteiro principal()
+    leia(n1)
+    escreva(n2)
 fim

@@ -16,10 +16,11 @@ logging.basicConfig(
 log = logging.getLogger()
 
 def mostrar_erro(p):
-    print("Erro:", end='')
-    for i in range(len(p)):
-        print("p[{}]:{}".format(i, p[i]), end='   ')
-    print()
+    if detailedLogs:
+        print("Erro:")
+        for i in range(len(p)):
+            print("p[{}]:{}".format(i, p[i]))
+        print(end='\n')
 
     error_line = p.lineno(2)
     father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
@@ -148,7 +149,7 @@ def p_indice_error(p):
         | indice ABRE_COLCHETE error FECHA_COLCHETE
     '''
 
-    print("Erro na definicao do indice. Expressao ou indice.")
+    print("Erro na definicao do indice (expressao ou indice).\n")
     mostrar_erro(p)
 
 def p_tipo(p):
@@ -214,7 +215,7 @@ def p_cabecalho_error(p):
         | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
     '''
 
-    print("Erro na definicao do cabecalho. Lista de parametros, corpo ou id.")
+    print("Erro na definicao do cabecalho (lista de parametros, corpo ou id).\n")
     mostrar_erro(p)
 
 def p_lista_parametros(p):
@@ -266,7 +267,7 @@ def p_parametro_error(p):
         | parametro ABRE_COLCHETE error
     '''
 
-    print("Erro na definicao do parametro. Tipo ou parametro.")
+    print("Erro na definicao do parametro (tipo ou parametro).\n")
     mostrar_erro(p)
 
 def p_corpo(p):
@@ -341,7 +342,7 @@ def p_se_error(p):
         | SE expressao ENTAO corpo SENAO corpo
     '''
 
-    print("Erro de definicao SE. Expressao ou corpo.")
+    print("Erro de definicao SE (expressao ou corpo).\n")
     mostrar_erro(p)
 
 def p_repita(p):
@@ -369,7 +370,7 @@ def p_repita_error(p):
         | REPITA corpo error expressao
     '''
 
-    print("Erro de definicao REPITA. Expressao ou corpo.")
+    print("Erro de definicao REPITA (expressao ou corpo).\n")
     mostrar_erro(p)
 
 def p_atribuicao(p):
@@ -412,7 +413,7 @@ def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
-    print("Erro de definicao LEIA. Var.")
+    print("Erro de definicao LEIA (var).\n")
     mostrar_erro(p)
 
 def p_escreva(p):
@@ -658,7 +659,7 @@ def p_fator(p):
 def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
-    print("Erro de definicao do fator.")
+    print("Erro de definicao do fator.\n")
     mostrar_erro(p)
 
 def p_numero(p):
@@ -736,31 +737,36 @@ def p_vazio(p):
     p[0] = pai
 
 def p_error(p):
-    if p:
+    if p and detailedLogs:
         token = p
-        print("\nErro:[{line},{column}]: Erro próximo ao token '{token}'".format(
+        print("Erro: [linha: {line}, coluna: {column}]\nPróximo ao token '{token}'\n".format(
             line=token.lineno, column=token.lineno, token=token.value))
 
 def main():
-    global parser, root
+    global parser, root, detailedLogs
 
     root = None
-    
+    detailedLogs = False
+
     # argv[1] = 'teste.tpp'
     aux = argv[1].split('.')
     if aux[-1] != 'tpp':
       raise IOError("Not a .tpp file!")
     data = open(argv[1])
 
+    if len(argv) == 3:
+        if argv[2].upper() == 'DETAILED':
+            detailedLogs = True
+
     source_file = data.read()
 
     parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
                    debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
-                   
+    
     parser.parse(source_file)
 
     if root and root.children != ():
-        print("\nGenerating Syntax Tree Graph...\n")
+        print("Generating Syntax Tree Graph...\n")
         DotExporter(root).to_picture(argv[1] + ".ast.png")
         UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
         DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
