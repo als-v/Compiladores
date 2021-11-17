@@ -179,15 +179,181 @@ def tabelas(listaVariaveis, listaFuncoes):
 
     return tabelaFuncao, tabelaVariaveis
 
+# retorna chamadas das funcoes 
+def chamadasFuncoes(linha, listaFuncoes):
+    # para cada elemento da lista de funcoes
+    for elemento in listaFuncoes:
+        # para cada funcao
+        for funcao in listaFuncoes[elemento]:
+            # volto a chamada
+            if funcao[5] <= linha < funcao[6]:
+                return funcao[0]
+
+def parametrosEnviados(no, escopo, listaNos):
+
+    for node in no.children:
+
+        # chamada da funcao 
+        if node.label == 'chamada_funcao':
+            nomeFuncao = node.descendants[1].label
+            tipoFuncao = func_list[nomeFuncao][0][1]
+            listaNos.append((nomeFuncao, tipoFuncao))
+
+            # retorno a lista
+            return listaNos
+        
+        # ID 
+        elif node.label == 'ID':
+            nomeVariavel = node.children[0].label
+            tipoVariavel = ''
+
+            if nomeVariavel in listaVariaveis:
+                for variavel in listaVariaveis[nomeVariavel]:
+                    if variavel[4] == escopo:
+                        tipoVariavel = variavel[1]
+                        break
+
+                if tipoVariavel == '':
+                    for variavel in listaVariaveis[nomeVariavel]:
+                        if variavel[4] == 'global':
+                            tipoVariavel = variavel[1]
+                            break
+
+                listaNos.append((nomeVariavel, tipoVariavel))
+
+                # retorno a lista
+                return listaNos
+
+        # numero 
+        elif node.label == 'numero':
+            tipoNumerico = node.children[0].label
+            
+            # inteiro
+            if tipoNumerico == 'NUM_INTEIRO':
+                numero = int(node.descendants[1].label)
+                tipoNumerico = 'inteiro'
+            
+            # flutuante
+            else:
+                tipoNumerico = 'flutuante'
+                numero = float(node.descendants[1].label)
+
+            listaNos.append((numero, tipoNumerico))
+
+            # retorno a lista
+            return listaNos
+
+        listaNos = parametrosEnviados(node, escopo, listaNos)
+    
+    # retorno a lista
+    return listaNos
+
 # funcao para verificar todas os possiveis erros
 def regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis):
     semanticaFuncaoPrincipal(listaFuncoes, listaErros)
     semanticaRetornoFuncoes(listaFuncoes, listaErros)
+    semanticaChamadasFuncoes(listaFuncoes, listaErros)
     print(listaErros)
 
-# funcao que verifica a semantica do retorno das funcoes
-def semanticaRetornoFuncoes(listaFuncoes, message_list):
-    message = ''
+def semanticaChamadasFuncoes(listaFuncoes, listaErros):
+    # mensagem de ERROR/WARNING
+    mensagem = ''
+
+    # por cada um dos elementos da lista de funcoes
+    for elemento in listaFuncoes:
+
+        # pra cada uma das funcoes
+        for funcao in listaFuncoes[elemento]:
+
+            # funcao nao declarada
+            if not funcao[-2]:
+                mensagem = ('ERROR', 'Erro: Chamada a função “' + str(elemento) + '” que não foi declarada.')
+                listaErros.append(mensagem)
+
+            else:
+
+                # caso a funcao tenha sido declarada, mas nao utilizada
+                if len(funcao[-1]) == 0 and elemento != 'principal':
+                    mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada.')
+                    listaErros.append(mensagem)
+
+                else:
+                    # variaveis de controle para chamadas e para recursão 
+                    chamadas = 0
+                    recursao = 0
+
+                    # para cada uma das chamadas da funcao 
+                    for cahamdaFuncao in funcao[-1]:
+                        if chamadasFuncoes(cahamdaFuncao[0], listaFuncoes) != elemento:
+                            chamadas += 1
+                        else:
+                            recursao += 1
+
+                    # caso seja a funcao principal, não conto
+                    if chamadas == 0 and elemento != 'principal':
+                        mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada.')
+                        listaErros.append(mensagem)
+
+                    # caso tenha recursão
+                    elif recursao > 0:
+                        mensagem = ('WARNING', 'Aviso: Chamada recursiva para “' + str(elemento) + '”.')
+                        listaErros.append(mensagem)
+
+                # para cada chamada da funcao 
+                for chamada in funcao[-1]:
+                    
+                    # a lista dos parametros
+                    listaParametros = parametrosEnviados(chamada[1].children[2], funcao[0], list())
+
+                    # caso seja maior que os parametros que a funcao recebe 
+                    if len(listaParametros) > funcao[2]:
+                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros maior que o declarado.')
+                        listaErros.append(mensagem)
+                    
+                    # caso seja menor que os parametros que a funcao recebe
+                    elif len(listaParametros) < funcao[2]:
+                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros menor que o declarado.')
+                        listaErros.append(mensagem)
+
+                    else:
+
+                        # lista auxiliar para os parametros
+                        parametros = []
+
+                        # para cada uma das funcoes
+                        for func in listaFuncoes[chamada[1].descendants[1].label]:
+
+                            # para cada um das variaveis da funcao
+                            for varFuncao in func[3]:
+
+                                # adiciono na lista auxiliar de parametros
+                                for index in range(len(listaVariaveis[varFuncao])):
+                                    if listaVariaveis[varFuncao][index][4] == chamada[1].descendants[1].label:
+                                        parametros.append((listaVariaveis[varFuncao][index][0], listaVariaveis[varFuncao][index][1]))
+                                        break
+
+                        # para cada um deles 
+                        for idx in range(len(parametros)):
+                            
+                            # index do tipo da variavel
+                            tipoIdx = listaParametros[idx][1]
+
+                            # flutuante
+                            if tipoIdx == 'NUM_PONTO_FLUTUANTE':
+                                tipoIdx = 'flutuante'
+                            
+                            # inteiro
+                            else:
+                                tipoIdx = 'inteiro'
+                            
+                            # caso o tipo dele seja diferente do tipo da variavel
+                            if parametros[idx][1] != tipoIdx:
+                                mensagem = ('WARNING', 'Aviso: Coerção implícita do valor passado para váriavel “' + str(parametros[idx][0]) + '” da função “' + str(chamada[1].descendants[1].label) + '”.')
+                                listaErros.append(mensagem)
+
+# funcao que verifica a semantica do retorno das funcoes 
+def semanticaRetornoFuncoes(listaFuncoes, listaErros):
+    mensagem = ''
 
     for nomeFuncao in listaFuncoes:
         for funcao in listaFuncoes[nomeFuncao]:
@@ -202,28 +368,28 @@ def semanticaRetornoFuncoes(listaFuncoes, message_list):
             if tipoFuncao == 'vazio':
                 if len(tiposRetorno) > 0:
                     if len(tiposRetorno) > 1:
-                        message = ('ERROR', f'Erro: Função ' + str(nomeFuncao) + ' deveria retornar vazio, mas retorna: ' + str(tiposRetorno[0]) + ' e ' + str(tiposRetorno[1]) + '.')
+                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna: ' + str(tiposRetorno[0]) + ' e ' + str(tiposRetorno[1]) + '.')
                     else:
-                        message = ('ERROR', 'Erro: Função ' + str(nomeFuncao) + ' deveria retornar vazio, mas retorna ' + str(tiposRetorno[0]) + '.')
+                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna ' + str(tiposRetorno[0]) + '.')
             elif tipoFuncao == 'inteiro':
                 if len(tiposRetorno) == 0:
-                    message = ('ERROR', 'Erro: Função ' + str(nomeFuncao) + ' deveria retornar inteiro, mas retorna vazio.')
+                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna vazio.')
                 else:
                     for tipoRetorno in tiposRetorno:
                         if tipoRetorno != 'inteiro' and tipoRetorno != 'ERROR':
-                            message = ('ERROR', 'Erro: Função ' + str(nomeFuncao) + ' deveria retornar inteiro, mas retorna flutuante.')
+                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna flutuante.')
                             break
             elif tipoFuncao == 'flutuante':
                 if len(tiposRetorno) == 0:
-                    message = ('ERROR', 'Erro: Função ' + str(nomeFuncao) + ' deveria retornar flutuante, mas retorna vazio.')
+                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna vazio.')
                 else:
                     for tipoRetorno in tiposRetorno:
                         if tipoRetorno != 'flutuante' and tipoRetorno != 'ERROR':
-                            message = ('ERROR', 'Erro: Função ' + str(nomeFuncao) + ' deveria retornar flutuante, mas retorna inteiro.')
+                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna inteiro.')
                             break
 
-            if message != '':
-                message_list.append(message)
+            if mensagem != '':
+                listaErros.append(mensagem)
 
 # funcao que verifica a semantica da funcao principal
 def semanticaFuncaoPrincipal(listaFuncoes, listaErros):

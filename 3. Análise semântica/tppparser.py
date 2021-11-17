@@ -289,7 +289,8 @@ def p_cabecalho(p):
 
     name_parameter = []
     for parameter in list_parameter:
-        name_parameter.append(encontrar_nos(parameter, [], 'ID')[0].children[0].label)
+        found = encontrar_nos(parameter, [], 'id')
+        name_parameter.append(found[0].children[0].label)
 
     line_start = p.lineno(2)
     line_end = p.slice[-1].lineno

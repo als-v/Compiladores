@@ -1,13 +1,14 @@
 inteiro: n1[122]
 inteiro: n2[31]
 
-principalaa()
-    inteiro: n3
-
-    leia(n1)
-    escreva(n2)
+principal(inteiro: n)
+    flutuante: b
+    n1 = teste(b)
 fim
 
-inteiro aaaaa()
-principal()
+inteiro teste(inteiro: n)
+    inteiro: a
+    a:= a * n
+
+    retorna(a)
 fim
