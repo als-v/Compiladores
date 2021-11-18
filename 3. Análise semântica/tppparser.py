@@ -20,40 +20,7 @@ listaFuncoes = {}
 listaVariaveis = {}
 listaErros = []
 
-def encontrar_nos(node, parametros, label):
-    for no in node.children:
-        parametros = encontrar_nos(no, parametros, label)
-
-        if no.label == label:
-            parametros.append(no)
-
-    return parametros
-
-def checar_variaveis(node, line, add=True):
-    nomeParametros = encontrar_nos(node, [], 'ID')
-    exist = False
-
-    for nomes in nomeParametros:
-        if nomes.children[0].label in listaVariaveis:
-            if add:
-                listaVariaveis[nomes.children[0].label][-1][-1].append((line, node))
-            exist = True
-        else:
-            if nomes.anchestors[-1].label != 'chamada_funcao':
-                message = ('ERROR', f'Erro: Variável "{nomes.children[0].label}" não declarada.')
-                listaErros.append(message)
-
-    return exist
-
-def checar_funcoes(node, line, p):
-    funcao = node.descendants[1].label
-
-    if funcao in listaFuncoes:
-        listaFuncoes[funcao][-1][-1].append((line, node))
-    else:
-        listaFuncoes[funcao] = [[funcao, '', 0, [], [], -1, -1, False, [(line, node)]]]
-
-def mostrar_erro(p):
+def mostrarErro(p):
     if detailedLogs:
         print("Erro:")
         for i in range(len(p)):
@@ -66,6 +33,46 @@ def mostrar_erro(p):
         "Syntax error parsing index rule at line {}".format(error_line))
     parser.errok()
     p[0] = father
+
+# encontrar os nos com uma label especifica de uma lista de nos
+def encontrarNos(node, nos, label):
+    for no in node.children:
+        nos = encontrarNos(no, nos, label)
+
+        if no.label == label:
+            nos.append(no)
+
+    return nos
+
+# verifica se a variavel nao foi declarada
+def erroVariavel(node, line, adicionar=True):
+    nos = encontrarNos(node, [], 'ID')
+
+    # para cada um dos nos
+    for no in nos:
+
+        # caso esteja na lista de variaveis
+        if no.children[0].label in listaVariaveis:
+            if adicionar:
+                listaVariaveis[no.children[0].label][-1][-1].append((line, node))
+        
+        # caso nao esteja na lista de variaveis
+        else:
+
+            # caso nao seja chamada de funcao
+            if no.anchestors[-1].label != 'chamada_funcao':
+                message = ('ERROR', 'Erro: Variável “' + str(no.children[0].label)  + '” não declarada.')
+                listaErros.append(message)
+
+def addFuncaoLista(no, line, p):
+    # pego a label da funcao
+    funcao = no.descendants[1].label
+
+    # caso ela ja exista
+    if funcao in listaFuncoes:
+        listaFuncoes[funcao][-1][-1].append((line, no))
+    else:
+        listaFuncoes[funcao] = [[funcao, '', 0, [], [], -1, -1, False, [(line, no)]]]
 
 def p_programa(p):
     '''programa : lista_declaracoes
@@ -116,29 +123,39 @@ def p_declaracao_variaveis(p):
 
     p[3].parent = pai
 
-    nodes_var = encontrar_nos(p.slice[-1].value, [], 'ID')
-    for node_var in nodes_var:
-        name_var = node_var.children[0].label
-        type_var = p.slice[1].value.children[0].children[0].label
+    # pegar todos os nos com a label id
+    nosVariaveis = encontrarNos(p.slice[-1].value, [], 'ID')
 
-        dimensions = encontrar_nos(p.slice[-1].value, [], 'expressao')
-        dimension_name = []
+    # para cada um dos nos
+    for noVariavel in nosVariaveis:
 
-        if len(dimensions) > 0:
-            for sun in dimensions:
-                aux = encontrar_nos(sun, [], 'numero')
+        # pego o tipo, o nome e as dimensoes 
+        nomeVariavel = noVariavel.children[0].label
+        tipoVariavel = p.slice[1].value.children[0].children[0].label
+        dimensoes = encontrarNos(p.slice[-1].value, [], 'expressao')
+        nomeDimensao = []
+        
+        # caso seja um arranjo
+        if len(dimensoes) > 0:
 
+            # pego a label
+            for dim in dimensoes:
+                
+                # pego os nos daquela label
+                aux = encontrarNos(dim, [], 'numero')
+
+                # caso nao encontre nos com a label 'numero'
                 if len(aux) == 0:
-                    aux = encontrar_nos(sun, [], 'var')
+                    aux = encontrarNos(dim, [], 'var')
+                
+                # adiciono os valores referente as dimensoes
+                nomeDimensao.append((aux[-1].children[-1].children[-1].label, aux[-1].children[-1].label))
 
-                dimension_name.append((aux[-1].children[-1].children[-1].label, aux[-1].children[-1].label))
-
-        if name_var in listaVariaveis:
-            # message = ('WARNING', f'Aviso: Variável "{name_var}" já declarada anteriormente.')
-            # listaErros.append(message)
-            listaVariaveis[name_var].append([name_var, type_var, len(dimensions), dimension_name, escopo, p.lineno(2), []])
+        # caso o nome esteja na lista de variaveis
+        if nomeVariavel in listaVariaveis:
+            listaVariaveis[nomeVariavel].append([nomeVariavel, tipoVariavel, len(dimensoes), nomeDimensao, escopo, p.lineno(2), []])
         else:
-            listaVariaveis[name_var] = [[name_var, type_var, len(dimensions), dimension_name, escopo, p.lineno(2), []]]
+            listaVariaveis[nomeVariavel] = [[nomeVariavel, tipoVariavel, len(dimensoes), nomeDimensao, escopo, p.lineno(2), []]]
 
 def p_inicializacao_variaveis(p):
     '''inicializacao_variaveis : atribuicao
@@ -213,7 +230,7 @@ def p_indice_error(p):
     '''
 
     print("Erro na definicao do indice (expressao ou indice).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_tipo(p):
     '''tipo : INTEIRO
@@ -249,8 +266,8 @@ def p_cabecalho(p):
     '''
     global escopo
 
-    # Nome da função
-    name_func = p.slice[1].value
+    # nome da função
+    nomeFuncao = p.slice[1].value
 
     pai = MyNode(name='cabecalho', type='CABECALHO')
     p[0] = pai
@@ -275,7 +292,7 @@ def p_cabecalho(p):
     filho_id = MyNode(name='fim', type='FIM', parent=filho6)
     p[6] = filho6
 
-    # Tipo da função
+    # o tipo da funcao
     if p.stack[-1].value.children[0].label == 'INTEIRO':
         type_func = 'inteiro'
     elif p.stack[-1].value.children[0].label == 'FLUTUANTE':
@@ -283,69 +300,91 @@ def p_cabecalho(p):
     else:
         type_func = 'vazio'
 
-    # Numero de parâmetros e o nome dos parâmetros
-    list_parameter = encontrar_nos(p.slice[3].value, [], 'parametro')
-    num_var = len(list_parameter)
+    # pego a lista de parametros e os nomes 
+    parametros = encontrarNos(p.slice[3].value, [], 'parametro')
+    sizeParam = len(parametros)
+    nomeParametros = []
 
-    name_parameter = []
-    for parameter in list_parameter:
-        found = encontrar_nos(parameter, [], 'id')
-        name_parameter.append(found[0].children[0].label)
+    for parametro in parametros:
+        found = encontrarNos(parametro, [], 'id')
+        nomeParametros.append(found[0].children[0].label)
 
-    line_start = p.lineno(2)
-    line_end = p.slice[-1].lineno
+    linhaInicio = p.lineno(2)
+    linhaFinal = p.slice[-1].lineno
 
-    for element in listaVariaveis:
-        for var in listaVariaveis[element]:
-            if line_start <= var[-2] < line_end:
-                var[4] = name_func
+    for elemento in listaVariaveis:
+        for variavel in listaVariaveis[elemento]:
+            if linhaInicio <= variavel[-2] < linhaFinal:
+                variavel[4] = nomeFuncao
 
-    # Tipos de Retorno
-    all_retorna_nodes = encontrar_nos(p.slice[5].value, [], 'RETORNA')
-    for index in range(len(all_retorna_nodes)):
-        all_retorna_nodes[index] = all_retorna_nodes[index].anchestors[-1]
+    # os tipos dos retornos
+    retornos = encontrarNos(p.slice[5].value, [], 'RETORNA')
+    for idx in range(len(retornos)):
+        retornos[idx] = retornos[idx].anchestors[-1]
 
+    # variavel de controle
     retorna = []
-    for retorna_node in all_retorna_nodes:
-        retorna_type = 'inteiro'
-        if len(encontrar_nos(retorna_node, [], 'NUM_PONTO_FLUTUANTE')) > 0:
-            retorna_type = 'flutuante'
-        elif len(encontrar_nos(retorna_node, [], 'ID')) > 0:
-            ids_call = encontrar_nos(retorna_node, [], 'ID')
 
-            for id_call in ids_call:
-                label_id = id_call.children[0].label
+    # para cada um dos retornos
+    for no in retornos:
+        tipoRetorno = 'inteiro'
 
-                if label_id in listaFuncoes:
-                    if label_id == name_func:
+        # caso seja ponto flutuante
+        if len(encontrarNos(no, [], 'NUM_PONTO_FLUTUANTE')) > 0:
+            tipoRetorno = 'flutuante'
+
+        # caso seja ID
+        elif len(encontrarNos(no, [], 'ID')) > 0:
+            ids = encontrarNos(no, [], 'ID')
+
+            for idNo in ids:
+                
+                # pego o no da variavel
+                label = idNo.children[0].label
+
+                # caso esteja na lista de funcoes
+                if label in listaFuncoes:
+
+                    if label == nomeFuncao:
                         if type_func == 'flutuante':
-                            retorna_type = 'flutuante'
+                            tipoRetorno = 'flutuante'
                     else:
-                        if listaFuncoes[label_id][0][1] == 'flutuante':
-                            retorna_type = 'flutuante'
-                elif label_id in listaVariaveis:
-                    for index in range(len(listaVariaveis[label_id]) - 1, -1, -1):
-                        if listaVariaveis[label_id][index][4] == name_func:
-                            if listaVariaveis[label_id][index][1] == 'flutuante':
-                                retorna_type = 'flutuante'
+                        if listaFuncoes[label][0][1] == 'flutuante':
+                            tipoRetorno = 'flutuante'
+
+                # caso esteja na lista de variaveis
+                elif label in listaVariaveis:
+
+                    # para cada um das variaveis
+                    for idx in range(len(listaVariaveis[label]) - 1, -1, -1):
+
+                        if listaVariaveis[label][idx][4] == nomeFuncao:
+                            if listaVariaveis[label][idx][1] == 'flutuante':
+                                tipoRetorno = 'flutuante'
                             break
-                        elif listaVariaveis[label_id][index][4] == 'global':
-                            if listaVariaveis[label_id][index][1] == 'flutuante':
-                                retorna_type = 'flutuante'
+
+                        elif listaVariaveis[label][idx][4] == 'global':
+                            if listaVariaveis[label][idx][1] == 'flutuante':
+                                tipoRetorno = 'flutuante'
                             break
                 else:
-                    retorna_type = 'ERROR'
+                    tipoRetorno = 'ERROR'
 
-        retorna.append((retorna_type, retorna_node))
+        retorna.append((tipoRetorno, no))
 
-    if name_func in listaFuncoes:
-        if listaFuncoes[name_func][0][-2]:
-            message = ('ERROR', f'Erro: Função "{name_func}" já declarada anteriormente.')
+    # caso a funcao ja esteja na lista
+    if nomeFuncao in listaFuncoes:
+        
+        # se ela ja tiver sido declarada
+        if listaFuncoes[nomeFuncao][0][-2]:
+            message = ('ERROR', 'Erro: Função “' + str(nomeFuncao)  + '” já declarada anteriormente.')
             listaErros.append(message)
+        
         else:
-            listaFuncoes[name_func][0] = [name_func, type_func, num_var, name_parameter, retorna, line_start, line_end, True, listaFuncoes[name_func][0][-1]]
+            listaFuncoes[nomeFuncao][0] = [nomeFuncao, type_func, sizeParam, nomeParametros, retorna, linhaInicio, linhaFinal, True, listaFuncoes[nomeFuncao][0][-1]]
+    
     else:
-        listaFuncoes[name_func] = [[name_func, type_func, num_var, name_parameter, retorna, line_start, line_end, True, []]]
+        listaFuncoes[nomeFuncao] = [[nomeFuncao, type_func, sizeParam, nomeParametros, retorna, linhaInicio, linhaFinal, True, []]]
 
 # erro-004
 def p_cabecalho_error(p):
@@ -355,7 +394,7 @@ def p_cabecalho_error(p):
     '''
 
     print("Erro na definicao do cabecalho (lista de parametros, corpo ou id).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_lista_parametros(p):
     '''lista_parametros : lista_parametros VIRGULA parametro
@@ -400,17 +439,16 @@ def p_parametro(p):
         filho_sym3 = MyNode(name=']', type='SIMBOLO', parent=filho3)
     p[3] = filho3
 
-    name_var = p.slice[-1].value.children[0].label
-    type_var = p.slice[1].value.children[0].children[0].label
+    nomeVariavel = p.slice[-1].value.children[0].label
+    tipoVariavel = p.slice[1].value.children[0].children[0].label
 
-    dimensions = []
-    dimension_name = []
+    dimensoes = []
+    nomeDimensoes = []
 
-    if name_var in listaVariaveis:
-        listaVariaveis[name_var].append(
-            [name_var, type_var, len(dimensions), dimension_name, escopo, p.lineno(2), []])
+    if nomeVariavel in listaVariaveis:
+        listaVariaveis[nomeVariavel].append([nomeVariavel, tipoVariavel, len(dimensoes), nomeDimensoes, escopo, p.lineno(2), []])
     else:
-        listaVariaveis[name_var] = [[name_var, type_var, len(dimensions), dimension_name, escopo, p.lineno(2), []]]
+        listaVariaveis[nomeVariavel] = [[nomeVariavel, tipoVariavel, len(dimensoes), nomeDimensoes, escopo, p.lineno(2), []]]
 
 # erro-006
 def p_parametro_error(p):
@@ -421,7 +459,7 @@ def p_parametro_error(p):
     '''
 
     print("Erro na definicao do parametro (tipo ou parametro).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_corpo(p):
     '''corpo : corpo acao
@@ -496,7 +534,7 @@ def p_se_error(p):
     '''
 
     print("Erro de definicao SE (expressao ou corpo).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_repita(p):
     '''repita : REPITA corpo ATE expressao
@@ -524,7 +562,7 @@ def p_repita_error(p):
     '''
 
     print("Erro de definicao REPITA (expressao ou corpo).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_atribuicao(p):
     '''atribuicao : var ATRIBUICAO expressao
@@ -541,7 +579,7 @@ def p_atribuicao(p):
 
     p[3].parent = pai
 
-    checar_variaveis(p.slice[0].value, p.lineno(2))
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_leia(p):
     '''leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE
@@ -565,14 +603,14 @@ def p_leia(p):
     p[4] = filho4
 
     line = p.lineno(2)
-    checar_variaveis(p.slice[0].value, line, False)
+    erroVariavel(p.slice[0].value, line, False)
 
 def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
     print("Erro de definicao LEIA (var).\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_escreva(p):
     '''escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -595,7 +633,7 @@ def p_escreva(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-    checar_variaveis(p.slice[0].value, p.lineno(2))
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_retorna(p):
     '''retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -618,7 +656,7 @@ def p_retorna(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-    checar_variaveis(p.slice[0].value, p.lineno(2))
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_expressao(p):
     '''expressao : expressao_logica
@@ -822,7 +860,7 @@ def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
     print("Erro de definicao do fator.\n")
-    mostrar_erro(p)
+    mostrarErro(p)
 
 def p_numero(p):
     '''numero : NUM_INTEIRO
@@ -871,8 +909,8 @@ def p_chamada_funcao(p):
     else:
         p[1].parent = pai
     
-    checar_variaveis(p.slice[3].value, p.lineno(2))
-    checar_funcoes(p.slice[0].value, p.lineno(2), p)
+    erroVariavel(p.slice[3].value, p.lineno(2))
+    addFuncaoLista(p.slice[0].value, p.lineno(2), p)
 
 def p_lista_argumentos(p):
     '''lista_argumentos : lista_argumentos VIRGULA expressao
@@ -912,6 +950,7 @@ def main(file, d = False, showTree = False):
 
     root = None
     detailedLogs = False
+    success = False
 
     data = open(file)
 
@@ -926,20 +965,21 @@ def main(file, d = False, showTree = False):
     arvore = parser.parse(source_file, tracking = True)
 
     if root and root.children != ():
-        print("Generating Syntax Tree Graph...\n")
-        DotExporter(root).to_picture(argv[1] + ".ast.png")
-        UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
-        DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
-        UniqueDotExporter(root).to_dotfile(argv[1] + ".unique.ast.dot")
+        success = True
         if showTree == True:
+            print("Generating Syntax Tree Graph...\n")
+            DotExporter(root).to_picture(argv[1] + ".ast.png")
+            UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
+            DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
+            UniqueDotExporter(root).to_dotfile(argv[1] + ".unique.ast.dot")
             print(RenderTree(root, style=AsciiStyle()).by_attr())
-        print("Graph was generated.\nOutput file: " + argv[1] + ".ast.png")
+            print("Graph was generated.\nOutput file: " + argv[1] + ".ast.png")
 
-        DotExporter(root, graph="graph",
-                    nodenamefunc=MyNode.nodenamefunc,
-                    nodeattrfunc=lambda node: 'label=%s' % (node.type),
-                    edgeattrfunc=MyNode.edgeattrfunc,
-                    edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
+            DotExporter(root, graph="graph",
+                        nodenamefunc=MyNode.nodenamefunc,
+                        nodeattrfunc=lambda node: 'label=%s' % (node.type),
+                        edgeattrfunc=MyNode.edgeattrfunc,
+                        edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
 
         # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
 
@@ -947,4 +987,4 @@ def main(file, d = False, showTree = False):
         print("\nError: unable to generate Syntax Tree.")
 
     print('\n')
-    return root, listaFuncoes, listaVariaveis, listaErros
+    return root, listaFuncoes, listaVariaveis, listaErros, success

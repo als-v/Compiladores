@@ -89,9 +89,9 @@ def geraIndex(size):
 def gerarTabela(list, flag):
 
     if flag == 'fun':
-        labels = ['NOME', 'TIPO', 'QUANTIDADE', 'PARAMETROS', 'PARÂMETROS', 'INICIO', 'LINHA INICIAL', 'LINHA FINAL']
+        labels = ['NOME', 'TIPO', 'QTD PARAMETROS', 'PARÂMETROS', 'INICIADA', 'LINHA INICIAL', 'LINHA FINAL']
         table = []
-        list_index = geraIndex(len(labels))
+        list_index = [0, 1, 2, 3, 7, 5, 6]
         table.append(labels)
 
         for element in list:
@@ -100,6 +100,7 @@ def gerarTabela(list, flag):
                 for index in list_index:
                     aux_array.append(func[index])
                 table.append(aux_array)
+
     elif flag == 'var':
         labels = ['NOME', 'TIPO', 'DIMENSÕES', 'TAMANHO DIMENSÕES', 'ESCOPO', 'LINHA']
         table = []
@@ -132,7 +133,7 @@ def showTable(table, opt):
     if opt == 'func':
         for i, row in enumerate(table):
             for idx, data in enumerate(row):
-                print(str(data).ljust(16), end=' | ')
+                print(str(data).ljust(15), end=' | ')
             print()
 
     elif opt == 'var':
@@ -143,6 +144,7 @@ def showTable(table, opt):
 
 # funcao que retorna tabelas de funcoes e de variaveis
 def tabelas(listaVariaveis, listaFuncoes):
+
     # para cada variavel
     for variavel in listaVariaveis:
         # index da variavel
@@ -196,7 +198,7 @@ def parametrosEnviados(no, escopo, listaNos):
         # chamada da funcao 
         if node.label == 'chamada_funcao':
             nomeFuncao = node.descendants[1].label
-            tipoFuncao = func_list[nomeFuncao][0][1]
+            tipoFuncao = listaFuncoes[nomeFuncao][0][1]
             listaNos.append((nomeFuncao, tipoFuncao))
 
             # retorno a lista
@@ -248,13 +250,181 @@ def parametrosEnviados(no, escopo, listaNos):
     # retorno a lista
     return listaNos
 
+def buscarNosRoot(no, label, listaNos):
+    # passo por todos e se o label for igual, adiciono na lista
+    for idx in range(len(no.anchestors)-1, -1, -1):
+        if no.anchestors[idx].label == label:
+            listaNos.append(no.anchestors[idx])
+
+    # retorna lista
+    return listaNos
+
+def buscarNos(tree, label, listaNos):
+    # para cada um dos nos
+    for no in tree.children:
+        # realizo a busca
+        listaNos = buscarNos(no, label, listaNos)
+
+        # caso for igual a label
+        if no.label == label:
+            listaNos.append(no)
+
+    # retorna a lista
+    return listaNos
+    
 # funcao para verificar todas os possiveis erros
 def regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis):
     semanticaFuncaoPrincipal(listaFuncoes, listaErros)
     semanticaRetornoFuncoes(listaFuncoes, listaErros)
     semanticaChamadasFuncoes(listaFuncoes, listaErros)
-    print(listaErros)
+    semanticaChamadasVariaveis(listaVariaveis, listaErros, tree)
+    semanticaTiposAtribuicoes(listaErros, tree)
+    semanticaArranjos(listaVariaveis, listaErros)
+    showErros(listaErros)
 
+def showErros(listaErros):
+    if len(listaErros) > 0:
+        for erros in listaErros:
+            print(erros[1])
+
+def semanticaArranjos(listaVariaveis, message_list):
+
+    # para cada um dos elementos da lista de variaveis
+    for elemento in listaVariaveis:
+
+        # para cada uma das variaveis
+        for variavel in listaVariaveis[elemento]:
+
+            # caso tenha dimensoes
+            if variavel[2] != 0:
+
+                # para cada uma das dimensoes
+                for dimension in variavel[3]:
+                    
+                    # quantidade de dimensoes
+                    dimension_number = 0
+
+                    # se nao for inteiro
+                    if dimension[1] != 'NUM_INTEIRO':
+                        dimension_number = float(dimension[0])
+                        message = ('ERROR', 'Erro: Índice de array  “'+ str(variavel[0]) + '” não inteiro.')
+                        message_list.append(message)
+
+                    else:
+                        dimension_number = int(dimension[0])
+
+                # para cada no
+                for no in variavel[-1]:
+                    numero = buscarNos(no[1].descendants[3], 'numero', [])
+
+                    if len(numero) > 0:
+                        # caso seja flutuante
+                        if len(buscarNos(numero[0], 'NUM_PONTO_FLUTUANTE', [])) > 0:
+                            message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” não inteiro.')
+                            message_list.append(message)
+                        
+                        else:
+                            numero = int(numero[0].descendants[-1].label)
+
+                            # caso esteja fora do intervalo
+                            if numero > dimension_number - 1:
+                                message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” fora do intervalo (out of range).')
+                                message_list.append(message)
+
+def semanticaTiposAtribuicoes(listaErros, tree):
+    
+    # pego todos os nos de atribuicao
+    nosAtribuicao = buscarNos(tree, 'atribuicao', [])
+
+    # para cada um dos nos
+    for idx in range(len(nosAtribuicao)):
+
+        # buscar o escopo da variavel
+        try:
+            escope_read = buscarNosRoot(nosAtribuicao[idx], 'cabecalho', [])[0].descendants[1].label
+        except:
+            escope_read = 'global'
+
+        nosDireita = parametrosEnviados(nosAtribuicao[idx], escope_read, [])
+        nosEsquerda = nosDireita.pop(0)
+
+        # variavel de controle para o tipo da variavel 
+        diffVar = False
+
+        # para cada variavel 
+        for varDireita in nosDireita:
+
+            # coercao implícita
+            if varDireita[1] != nosEsquerda[1] and varDireita[1] != '':
+                diffVar = [varDireita[0], varDireita[1]]
+
+                message = ('WARNING', 'Aviso: Coerção implícita do valor de “' + str(varDireita[0]) + '”.')
+                listaErros.append(message)
+
+        if diffVar and diffVar != nosEsquerda[1]:
+            message = ('WARNING', 'Aviso: Atribuição de tipos distintos “' + str(nosEsquerda[0]) + '” ' + str(nosEsquerda[1]) + ' e “' + str(diffVar[0]) + '” ' + str(diffVar[1]) + '.')
+            listaErros.append(message)
+
+def semanticaChamadasVariaveis(listaVariaveis, listaErros, tree):
+    # busco os nos que sao das funcoes leia()
+    nos = buscarNos(tree, 'LEIA', [])
+
+    # para cada um deles
+    for idx in range(len(nos)):
+
+        # pego o no
+        nos[idx] = nos[idx].anchestors[-1]
+
+        # o escopo do no
+        escopo = buscarNosRoot(nos[idx], 'cabecalho', [])[0].descendants[1].label
+
+        # o id
+        idNo = buscarNos(nos[idx], 'ID', [])[0].children[0].label
+
+        # para cada variavel
+        for variavel in listaVariaveis[idNo]:
+            found = False
+
+            # caso a variavel esteja no escopo
+            if variavel[4] == escopo:
+                found = True
+
+                # vejo se ja foi inicializada
+                if len(variavel[-1]) == 0:
+                    message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não inicializada.')
+                    listaErros.append(message)
+
+            # caso nao esteja
+            if not found:
+
+                # vejo se ela esta no escopo global
+                for variavelIdx in listaVariaveis[idNo]:
+                    if variavelIdx[4] == 'global':
+
+                        # vejo se ja foi inicializada
+                        if len(variavelIdx[-1]) == 0:
+                            message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não inicializada.')
+                            listaErros.append(message)
+
+    # para cada elemento da lista de variaveis
+    for elemento in listaVariaveis:
+
+        # para cada variavel
+        for variavel in listaVariaveis[elemento]:
+
+            # caso ela nao tenha sido inicializada
+            if len(variavel[-1]) == 0:
+                message = ('WARNING', 'Aviso: Variável “' + str(variavel[0]) + '” declarada e não inicializada.')
+                listaErros.append(message)
+
+            # caso ja tenha sido declarada anteriormente
+            if len(listaVariaveis[elemento]) > 1:
+                for variavelAgn in listaVariaveis[elemento]:
+                    if variavelAgn != variavel and variavelAgn[4] == variavel[4]:
+                        message = ('WARNING', 'Aviso: Variável “' + str(variavelAgn[0]) + '” já declarada anteriormente.')
+                        listaErros.append(message)
+
+# funcao que verifica a semantica das chamadas de funcoes
 def semanticaChamadasFuncoes(listaFuncoes, listaErros):
     # mensagem de ERROR/WARNING
     mensagem = ''
@@ -407,14 +577,17 @@ def semanticaFuncaoPrincipal(listaFuncoes, listaErros):
             if not listaFuncoes['principal'][0][5] <= funcoes[0] < listaFuncoes['principal'][0][6]:
                 listaErros.append(('ERROR', f'Erro: Chamada para a função principal não permitida.'))
     
-def main(file):
+def main(file, detailed = False, showTree = False):
     global tree, listaFuncoes, listaVariaveis, listaErros
 
-    tree, listaFuncoes, listaVariaveis, listaErros = sintatico.main(file)
+    tree, listaFuncoes, listaVariaveis, listaErros, success = sintatico.main(file, d = detailed, showTree = showTree)
 
-    tabelaFuncao, tabelaVariaveis = tabelas(listaVariaveis, listaFuncoes)
+    if success:
+        tabelaFuncao, tabelaVariaveis = tabelas(listaVariaveis, listaFuncoes)
 
-    regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis)
+        regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis)
+    else:
+        print('Houve um erro nas etapas anteriores')
     # podaArvore(tree)
     return None
 
