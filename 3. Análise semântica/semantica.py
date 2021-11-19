@@ -3,78 +3,7 @@ from anytree import Node
 import tppparser as sintatico
 from tabulate import tabulate
 import numpy as np
-
-# definicoes dos operadores
-operadores = [
-    '+', 
-    '-', 
-    '*', 
-    '/', 
-    ':=', 
-    ':'
-]
-
-# definicoes das definicoes operadores
-operadores_definicao = [
-    'operador_soma',
-    'operador_multiplicacao'
-]
-
-# definicoes dos nomes
-nomes = [
-    'acao', 
-    'expressao', 
-    'expressao_logica', 
-    'expressao_simples', 
-    'expressao_aditiva', 
-    'expressao_multiplicativa', 
-    'expressao_unaria', 
-    'operador_relacional', 
-    'operador_logico', 
-    'operador_negacao', 
-    'fator', 
-    'lista_variaveis'
-]
-
-# funcao para poda no
-def podaNo(tree):
-    aux = []
-    pai = tree.parent
-
-    for i in range(len(pai.children)):
-        if (pai.children[i].name == arvore.name):
-            aux += arvore.children
-        else:
-            aux.append(pai.children[i])
-
-    pai.children = aux
-
-# funcao para poda operadores
-def podaOperadores(tree):
-    aux = []
-    print('poda operadores: ', tree.name)
-    print(tree.children)
-    if tree.parent.name in operadores_definicao:
-        podaNo(tree.parent)
-    
-    pai = tree.parent
-    aux = [pai.children[0], pai.children[2]] 
-    tree.children = aux
-    pai.children = [tree]
-
-# funcao que realiza a poda na arvore
-def podaArvore(tree):
-    # print('poda arvore: ', tree.name)
-
-    for no in tree.children:
-        podaArvore(no)
-    
-    if tree.name in operadores:
-        podaOperadores(tree)
-    
-    if (tree.name in nomes) and tree.parent.name == tree.name:
-        print('caiu aqui')
-        podaNo(tree)
+from arvore import buscarNos
 
 # funcao que gera indexes
 def geraIndex(size):
@@ -259,19 +188,6 @@ def buscarNosRoot(no, label, listaNos):
     # retorna lista
     return listaNos
 
-def buscarNos(tree, label, listaNos):
-    # para cada um dos nos
-    for no in tree.children:
-        # realizo a busca
-        listaNos = buscarNos(no, label, listaNos)
-
-        # caso for igual a label
-        if no.label == label:
-            listaNos.append(no)
-
-    # retorna a lista
-    return listaNos
-    
 # funcao para verificar todas os possiveis erros
 def regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis):
     semanticaFuncaoPrincipal(listaFuncoes, listaErros)
@@ -283,9 +199,30 @@ def regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFunca
     showErros(listaErros)
 
 def showErros(listaErros):
+    erros = []
+    
     if len(listaErros) > 0:
-        for erros in listaErros:
-            print(erros[1])
+        for tuplaErros in listaErros:
+            if tuplaErros not in erros:
+                erros.append(tuplaErros)
+    
+    init = True
+    if len(erros) > 0:
+        for idx, erro in enumerate(erros):
+            if erro[0] == 'ERROR':
+                if init: 
+                    print('\nERROS:')
+                    init = False
+                print(erro[1])
+
+    init = True
+    if len(erros) > 0:
+        for idx, erro in enumerate(erros):
+            if erro[0] == 'WARNING':
+                if init: 
+                    print('\nWARNINGS:')
+                    init = False
+                print(erro[1])
 
 def semanticaArranjos(listaVariaveis, message_list):
 
@@ -307,7 +244,7 @@ def semanticaArranjos(listaVariaveis, message_list):
                     # se nao for inteiro
                     if dimension[1] != 'NUM_INTEIRO':
                         dimension_number = float(dimension[0])
-                        message = ('ERROR', 'Erro: Índice de array  “'+ str(variavel[0]) + '” não inteiro.')
+                        message = ('ERROR', 'Erro: Índice de array “'+ str(variavel[0]) + '” não inteiro')
                         message_list.append(message)
 
                     else:
@@ -320,7 +257,7 @@ def semanticaArranjos(listaVariaveis, message_list):
                     if len(numero) > 0:
                         # caso seja flutuante
                         if len(buscarNos(numero[0], 'NUM_PONTO_FLUTUANTE', [])) > 0:
-                            message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” não inteiro.')
+                            message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” não inteiro')
                             message_list.append(message)
                         
                         else:
@@ -328,7 +265,7 @@ def semanticaArranjos(listaVariaveis, message_list):
 
                             # caso esteja fora do intervalo
                             if numero > dimension_number - 1:
-                                message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” fora do intervalo (out of range).')
+                                message = ('ERROR', 'Erro: Índice de array “' + str(variavel[0]) + '” fora do intervalo (out of range)')
                                 message_list.append(message)
 
 def semanticaTiposAtribuicoes(listaErros, tree):
@@ -357,12 +294,22 @@ def semanticaTiposAtribuicoes(listaErros, tree):
             # coercao implícita
             if varDireita[1] != nosEsquerda[1] and varDireita[1] != '':
                 diffVar = [varDireita[0], varDireita[1]]
+                isValue = True
 
-                message = ('WARNING', 'Aviso: Coerção implícita do valor de “' + str(varDireita[0]) + '”.')
+                try:
+                    valor = int(varDireita[0])
+                except:
+                    isValue = False
+                print(nosEsquerda)
+                if isValue:
+                    message = ('WARNING', 'Aviso: Coerção implícita do valor atribuído para “' + str(nosEsquerda[0]) + '”')
+                else:
+                    message = ('WARNING', 'Aviso: Coerção implícita do valor retornado por “' + str(varDireita[0]) + '”')
+                
                 listaErros.append(message)
 
         if diffVar and diffVar != nosEsquerda[1]:
-            message = ('WARNING', 'Aviso: Atribuição de tipos distintos “' + str(nosEsquerda[0]) + '” ' + str(nosEsquerda[1]) + ' e “' + str(diffVar[0]) + '” ' + str(diffVar[1]) + '.')
+            message = ('WARNING', 'Aviso: Atribuição de tipos distintos “' + str(nosEsquerda[0]) + '” ' + str(nosEsquerda[1]) + ' e “' + str(diffVar[0]) + '” ' + str(diffVar[1]))
             listaErros.append(message)
 
 def semanticaChamadasVariaveis(listaVariaveis, listaErros, tree):
@@ -382,29 +329,30 @@ def semanticaChamadasVariaveis(listaVariaveis, listaErros, tree):
         idNo = buscarNos(nos[idx], 'ID', [])[0].children[0].label
 
         # para cada variavel
-        for variavel in listaVariaveis[idNo]:
-            found = False
+        if idNo in listaVariaveis[idNo][0][0]:
+            for variavel in listaVariaveis[idNo]:
+                found = False
 
-            # caso a variavel esteja no escopo
-            if variavel[4] == escopo:
-                found = True
+                # caso a variavel esteja no escopo
+                if variavel[4] == escopo:
+                    found = True
 
-                # vejo se ja foi inicializada
-                if len(variavel[-1]) == 0:
-                    message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não inicializada.')
-                    listaErros.append(message)
+                    # vejo se ja foi inicializada
+                    if len(variavel[-1]) == 0:
+                        message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não utilizada')
+                        listaErros.append(message)
 
-            # caso nao esteja
-            if not found:
+                # caso nao esteja
+                if not found:
 
-                # vejo se ela esta no escopo global
-                for variavelIdx in listaVariaveis[idNo]:
-                    if variavelIdx[4] == 'global':
+                    # vejo se ela esta no escopo global
+                    for variavelIdx in listaVariaveis[idNo]:
+                        if variavelIdx[4] == 'global':
 
-                        # vejo se ja foi inicializada
-                        if len(variavelIdx[-1]) == 0:
-                            message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não inicializada.')
-                            listaErros.append(message)
+                            # vejo se ja foi inicializada
+                            if len(variavelIdx[-1]) == 0:
+                                message = ('WARNING', 'Aviso: Variável “' + str(idNo) + '” declarada e não utilizada')
+                                listaErros.append(message)
 
     # para cada elemento da lista de variaveis
     for elemento in listaVariaveis:
@@ -414,14 +362,14 @@ def semanticaChamadasVariaveis(listaVariaveis, listaErros, tree):
 
             # caso ela nao tenha sido inicializada
             if len(variavel[-1]) == 0:
-                message = ('WARNING', 'Aviso: Variável “' + str(variavel[0]) + '” declarada e não inicializada.')
+                message = ('WARNING', 'Aviso: Variável “' + str(variavel[0]) + '” declarada e não utilizada')
                 listaErros.append(message)
 
             # caso ja tenha sido declarada anteriormente
             if len(listaVariaveis[elemento]) > 1:
                 for variavelAgn in listaVariaveis[elemento]:
                     if variavelAgn != variavel and variavelAgn[4] == variavel[4]:
-                        message = ('WARNING', 'Aviso: Variável “' + str(variavelAgn[0]) + '” já declarada anteriormente.')
+                        message = ('WARNING', 'Aviso: Variável “' + str(variavelAgn[0]) + '” já declarada anteriormente')
                         listaErros.append(message)
 
 # funcao que verifica a semantica das chamadas de funcoes
@@ -437,14 +385,14 @@ def semanticaChamadasFuncoes(listaFuncoes, listaErros):
 
             # funcao nao declarada
             if not funcao[-2]:
-                mensagem = ('ERROR', 'Erro: Chamada a função “' + str(elemento) + '” que não foi declarada.')
+                mensagem = ('ERROR', 'Erro: Chamada a função “' + str(elemento) + '” que não foi declarada')
                 listaErros.append(mensagem)
 
             else:
 
                 # caso a funcao tenha sido declarada, mas nao utilizada
                 if len(funcao[-1]) == 0 and elemento != 'principal':
-                    mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada.')
+                    mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada')
                     listaErros.append(mensagem)
 
                 else:
@@ -461,12 +409,12 @@ def semanticaChamadasFuncoes(listaFuncoes, listaErros):
 
                     # caso seja a funcao principal, não conto
                     if chamadas == 0 and elemento != 'principal':
-                        mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada.')
+                        mensagem = ('WARNING', 'Aviso: Função “' + str(elemento) + '” declarada, mas não utilizada')
                         listaErros.append(mensagem)
 
                     # caso tenha recursão
                     elif recursao > 0:
-                        mensagem = ('WARNING', 'Aviso: Chamada recursiva para “' + str(elemento) + '”.')
+                        mensagem = ('WARNING', 'Aviso: Chamada recursiva para “' + str(elemento) + '”')
                         listaErros.append(mensagem)
 
                 # para cada chamada da funcao 
@@ -477,12 +425,12 @@ def semanticaChamadasFuncoes(listaFuncoes, listaErros):
 
                     # caso seja maior que os parametros que a funcao recebe 
                     if len(listaParametros) > funcao[2]:
-                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros maior que o declarado.')
+                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros maior que o declarado')
                         listaErros.append(mensagem)
                     
                     # caso seja menor que os parametros que a funcao recebe
                     elif len(listaParametros) < funcao[2]:
-                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros menor que o declarado.')
+                        mensagem = ('ERROR', 'Erro: Chamada à função “' + str(funcao[0]) + '” com número de parâmetros menor que o declarado')
                         listaErros.append(mensagem)
 
                     else:
@@ -518,7 +466,7 @@ def semanticaChamadasFuncoes(listaFuncoes, listaErros):
                             
                             # caso o tipo dele seja diferente do tipo da variavel
                             if parametros[idx][1] != tipoIdx:
-                                mensagem = ('WARNING', 'Aviso: Coerção implícita do valor passado para váriavel “' + str(parametros[idx][0]) + '” da função “' + str(chamada[1].descendants[1].label) + '”.')
+                                mensagem = ('WARNING', 'Aviso: Coerção implícita do valor passado para váriavel “' + str(parametros[idx][0]) + '” da função “' + str(chamada[1].descendants[1].label) + '”')
                                 listaErros.append(mensagem)
 
 # funcao que verifica a semantica do retorno das funcoes 
@@ -538,24 +486,24 @@ def semanticaRetornoFuncoes(listaFuncoes, listaErros):
             if tipoFuncao == 'vazio':
                 if len(tiposRetorno) > 0:
                     if len(tiposRetorno) > 1:
-                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna: ' + str(tiposRetorno[0]) + ' e ' + str(tiposRetorno[1]) + '.')
+                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna: ' + str(tiposRetorno[0]) + ' e ' + str(tiposRetorno[1]))
                     else:
-                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna ' + str(tiposRetorno[0]) + '.')
+                        mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar vazio, mas retorna ' + str(tiposRetorno[0]))
             elif tipoFuncao == 'inteiro':
                 if len(tiposRetorno) == 0:
-                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna vazio.')
+                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna vazio')
                 else:
                     for tipoRetorno in tiposRetorno:
                         if tipoRetorno != 'inteiro' and tipoRetorno != 'ERROR':
-                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna flutuante.')
+                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar inteiro, mas retorna flutuante')
                             break
             elif tipoFuncao == 'flutuante':
                 if len(tiposRetorno) == 0:
-                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna vazio.')
+                    mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna vazio')
                 else:
                     for tipoRetorno in tiposRetorno:
                         if tipoRetorno != 'flutuante' and tipoRetorno != 'ERROR':
-                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna inteiro.')
+                            mensagem = ('ERROR', 'Erro: Função “' + str(nomeFuncao) + '” deveria retornar flutuante, mas retorna inteiro')
                             break
 
             if mensagem != '':
@@ -565,7 +513,7 @@ def semanticaRetornoFuncoes(listaFuncoes, listaErros):
 def semanticaFuncaoPrincipal(listaFuncoes, listaErros):
     # caso nao exista a funcao principal
     if 'principal' not in listaFuncoes or not listaFuncoes['principal'][0][7]:
-        listaErros.append(('ERROR', f'Erro: Função principal não declarada.'))
+        listaErros.append(('ERROR', 'Erro: Função principal não declarada'))
     
     # caso exista funcao principal
     else:
@@ -575,7 +523,7 @@ def semanticaFuncaoPrincipal(listaFuncoes, listaErros):
             
             # caso a funcao principal tenha sido chamada dentro de outra funcao
             if not listaFuncoes['principal'][0][5] <= funcoes[0] < listaFuncoes['principal'][0][6]:
-                listaErros.append(('ERROR', f'Erro: Chamada para a função principal não permitida.'))
+                listaErros.append(('ERROR', f'Erro: Chamada para a função principal não permitida'))
     
 def main(file, detailed = False, showTree = False):
     global tree, listaFuncoes, listaVariaveis, listaErros
@@ -584,12 +532,10 @@ def main(file, detailed = False, showTree = False):
 
     if success:
         tabelaFuncao, tabelaVariaveis = tabelas(listaVariaveis, listaFuncoes)
-
         regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis)
+        
+        return tree
     else:
         print('Houve um erro nas etapas anteriores')
-    # podaArvore(tree)
-    return None
 
-if __name__ == "__main__":
-    main()
+    return None

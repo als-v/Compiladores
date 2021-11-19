@@ -34,19 +34,9 @@ def mostrarErro(p):
     parser.errok()
     p[0] = father
 
-# encontrar os nos com uma label especifica de uma lista de nos
-def encontrarNos(node, nos, label):
-    for no in node.children:
-        nos = encontrarNos(no, nos, label)
-
-        if no.label == label:
-            nos.append(no)
-
-    return nos
-
 # verifica se a variavel nao foi declarada
 def erroVariavel(node, line, adicionar=True):
-    nos = encontrarNos(node, [], 'ID')
+    nos = buscarNos(node, [], 'ID')
 
     # para cada um dos nos
     for no in nos:
@@ -61,7 +51,7 @@ def erroVariavel(node, line, adicionar=True):
 
             # caso nao seja chamada de funcao
             if no.anchestors[-1].label != 'chamada_funcao':
-                message = ('ERROR', 'Erro: Variável “' + str(no.children[0].label)  + '” não declarada.')
+                message = ('ERROR', 'Erro: Variável “' + str(no.children[0].label)  + '” não declarada')
                 listaErros.append(message)
 
 def addFuncaoLista(no, line, p):
@@ -107,6 +97,16 @@ def p_declaracao(p):
     p[0] = pai
     p[1].parent = pai
 
+# encontrar os nos com uma label especifica de uma lista de nos
+def buscarNos(node, nos, label):
+    for no in node.children:
+        nos = buscarNos(no, nos, label)
+
+        if no.label == label:
+            nos.append(no)
+
+    return nos
+
 def p_declaracao_variaveis(p):
     '''declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis
     '''
@@ -124,7 +124,7 @@ def p_declaracao_variaveis(p):
     p[3].parent = pai
 
     # pegar todos os nos com a label id
-    nosVariaveis = encontrarNos(p.slice[-1].value, [], 'ID')
+    nosVariaveis = buscarNos(p.slice[-1].value, [], 'ID')
 
     # para cada um dos nos
     for noVariavel in nosVariaveis:
@@ -132,7 +132,7 @@ def p_declaracao_variaveis(p):
         # pego o tipo, o nome e as dimensoes 
         nomeVariavel = noVariavel.children[0].label
         tipoVariavel = p.slice[1].value.children[0].children[0].label
-        dimensoes = encontrarNos(p.slice[-1].value, [], 'expressao')
+        dimensoes = buscarNos(p.slice[-1].value, [], 'expressao')
         nomeDimensao = []
         
         # caso seja um arranjo
@@ -142,11 +142,11 @@ def p_declaracao_variaveis(p):
             for dim in dimensoes:
                 
                 # pego os nos daquela label
-                aux = encontrarNos(dim, [], 'numero')
+                aux = buscarNos(dim, [], 'numero')
 
                 # caso nao encontre nos com a label 'numero'
                 if len(aux) == 0:
-                    aux = encontrarNos(dim, [], 'var')
+                    aux = buscarNos(dim, [], 'var')
                 
                 # adiciono os valores referente as dimensoes
                 nomeDimensao.append((aux[-1].children[-1].children[-1].label, aux[-1].children[-1].label))
@@ -167,7 +167,7 @@ def p_inicializacao_variaveis(p):
     p[1].parent = pai
 
 def p_lista_variaveis(p):
-    '''lista_variaveis : VIRGULA var
+    '''lista_variaveis : lista_variaveis VIRGULA var
         | var
     '''
 
@@ -193,7 +193,7 @@ def p_var(p):
     p[1] = filho
     if len(p) > 2:
         p[2].parent = pai
-
+    
 def p_indice(p):
     '''indice : indice ABRE_COLCHETE expressao FECHA_COLCHETE
         | ABRE_COLCHETE expressao FECHA_COLCHETE
@@ -261,6 +261,16 @@ def p_declaracao_funcao(p):
     if len(p) == 3:
         p[2].parent = pai
 
+def p_declaracao_funcao_error(p):
+    '''declaracao_funcao :  error 
+    '''
+    print("Erro ao definir a função")
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error("Erro ao definir a função na linha{}".format(error_line))
+    parser.errok()
+    p[0] = father
+
 def p_cabecalho(p):
     '''cabecalho : ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM
     '''
@@ -301,12 +311,12 @@ def p_cabecalho(p):
         type_func = 'vazio'
 
     # pego a lista de parametros e os nomes 
-    parametros = encontrarNos(p.slice[3].value, [], 'parametro')
+    parametros = buscarNos(p.slice[3].value, [], 'parametro')
     sizeParam = len(parametros)
     nomeParametros = []
 
     for parametro in parametros:
-        found = encontrarNos(parametro, [], 'id')
+        found = buscarNos(parametro, [], 'id')
         nomeParametros.append(found[0].children[0].label)
 
     linhaInicio = p.lineno(2)
@@ -318,7 +328,7 @@ def p_cabecalho(p):
                 variavel[4] = nomeFuncao
 
     # os tipos dos retornos
-    retornos = encontrarNos(p.slice[5].value, [], 'RETORNA')
+    retornos = buscarNos(p.slice[5].value, [], 'RETORNA')
     for idx in range(len(retornos)):
         retornos[idx] = retornos[idx].anchestors[-1]
 
@@ -330,12 +340,12 @@ def p_cabecalho(p):
         tipoRetorno = 'inteiro'
 
         # caso seja ponto flutuante
-        if len(encontrarNos(no, [], 'NUM_PONTO_FLUTUANTE')) > 0:
+        if len(buscarNos(no, [], 'NUM_PONTO_FLUTUANTE')) > 0:
             tipoRetorno = 'flutuante'
 
         # caso seja ID
-        elif len(encontrarNos(no, [], 'ID')) > 0:
-            ids = encontrarNos(no, [], 'ID')
+        elif len(buscarNos(no, [], 'ID')) > 0:
+            ids = buscarNos(no, [], 'ID')
 
             for idNo in ids:
                 
@@ -377,7 +387,7 @@ def p_cabecalho(p):
         
         # se ela ja tiver sido declarada
         if listaFuncoes[nomeFuncao][0][-2]:
-            message = ('ERROR', 'Erro: Função “' + str(nomeFuncao)  + '” já declarada anteriormente.')
+            message = ('ERROR', 'Erro: Função “' + str(nomeFuncao)  + '” já declarada anteriormente')
             listaErros.append(message)
         
         else:
