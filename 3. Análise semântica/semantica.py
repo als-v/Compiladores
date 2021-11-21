@@ -1,8 +1,6 @@
 import anytree
 from anytree import Node
 import tppparser as sintatico
-from tabulate import tabulate
-import numpy as np
 from arvore import buscarNos
 
 # funcao que gera indexes
