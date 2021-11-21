@@ -14,8 +14,8 @@ def geraIndex(size):
     
     return indexes
 
-# funcao que gera as tabelas de funcoes e de variaveis
-def gerarTabela(list, flag):
+# gera tabelas separadas de funcoes e de variaveis
+def gerarTabelaSeparada(list, flag):
 
     if flag == 'fun':
         labels = ['NOME', 'TIPO', 'QTD PARAMETROS', 'PARÂMETROS', 'INICIADA', 'LINHA INICIAL', 'LINHA FINAL']
@@ -33,30 +33,80 @@ def gerarTabela(list, flag):
     elif flag == 'var':
         labels = ['NOME', 'TIPO', 'DIMENSÕES', 'TAMANHO DIMENSÕES', 'ESCOPO', 'LINHA']
         table = []
-        list_index = geraIndex(len(labels))
+        listaIndex = geraIndex(len(labels))
         table.append(labels)
 
         for element in list:
             for func in list[element]:
-                aux_array = []
-                for index in list_index:
+                auxArray = []
+                for index in listaIndex:
                     if index == 3:
-                        dim_tam = []
+                        valuesDimensoes = []
                         for j in range(len(func[index])):
-                            if func[index][j][1] == 'NUM_PONTO_FLUTUANTE':
-                                value = float(func[index][j][0])
-                            else:
+
+                            try:
                                 value = int(func[index][j][0])
-                            dim_tam.append(value)
-                        aux_array.append(dim_tam)
+                            except:
+                                 value = float(func[index][j][0])
+
+                            valuesDimensoes.append(value)
+                        auxArray.append(valuesDimensoes)
                     else:
-                        aux_array.append(func[index])
-                table.append(aux_array)
+                        auxArray.append(func[index])
+                table.append(auxArray)
+    
+    return table
+
+# funcao que gera a tabelas
+def gerarTabela(listaVariavel, listaFuncao):
+
+    table = []
+    labels = ['TIPO', 'NOME', 'DECLARAÇÃO', 'QTD PARAMETROS', 'PARÂMETROS', 'DECLARADA', 'DIMENSÕES', 'TAMANHO DIMENSÕES', 'ESCOPO', 'LINHA INICIAL', 'LINHA FINAL']
+    list_index = [0, 1, 2, 3, 7, 5, 6]
+    rangeList = len(labels)
+    table.append(labels)
+
+    for element in listaFuncao:
+        for func in listaFuncao[element]:
+            aux_array = []
+            aux_array.append('FUNÇÃO')
+            for index in list_index:
+                aux_array.append(func[index])
+                if index == 7:
+                    for _ in range(3):
+                        aux_array.append('-')
+            table.append(aux_array)
+
+    list_index = [0, 1, 2, 3, 4, 5]
+    for element in listaVariavel:
+        for func in listaVariavel[element]:
+            aux_array = []
+            aux_array.append('VARIAVEL')
+            for index in list_index:
+                if index != 3:
+                    aux_array.append(func[index])
+
+                if index == 1:
+                    for _ in range(3):
+                        aux_array.append('-')
+                if index == 3:
+                    tamanhoArray = []
+                    for tamanho in func[index]:
+                        try:
+                            tamanhoArray.append(int(tamanho[0]))
+                        except:
+                            tamanhoArray.append(float(tamanho[0]))
+
+                    aux_array.append(tamanhoArray)
+                if index == 5:
+                    aux_array.append(func[index])
+
+            table.append(aux_array)
     
     return table
 
 # funcao para mostrar as tabelas
-def showTable(table, opt):
+def showTables(table, opt):
     labels = ''
 
     if opt == 'func':
@@ -71,8 +121,14 @@ def showTable(table, opt):
                 print(str(data).ljust(18), end=' | ')
             print()
 
+    elif opt == 'all':
+        for i, row in enumerate(table):
+            for idx, data in enumerate(row):
+                print(str(data).ljust(17), end=' | ')
+            print()
+
 # funcao que retorna tabelas de funcoes e de variaveis
-def tabelas(listaVariaveis, listaFuncoes):
+def tabelas(listaVariaveis, listaFuncoes, showTable = False):
 
     # para cada variavel
     for variavel in listaVariaveis:
@@ -99,14 +155,14 @@ def tabelas(listaVariaveis, listaFuncoes):
 
                     chamadasIdx += 1
     
-    tabelaFuncao = gerarTabela(listaFuncoes, 'fun')
-    tabelaVariaveis = gerarTabela(listaVariaveis, 'var')
+    tabelaFuncao = gerarTabelaSeparada(listaFuncoes, 'fun')
+    tabelaVariaveis = gerarTabelaSeparada(listaVariaveis, 'var')
+    tabela = gerarTabela(listaVariaveis, listaFuncoes)
 
-    print('Tabela de funções:')
-    showTable(tabelaFuncao, 'func')
-    print('\n\nTabela de variaveis:')
-    showTable(tabelaVariaveis, 'var')
-    print('\n\n')
+    if showTable:
+        print('\n\nTabela:')
+        showTables(tabela, 'all')
+        print('\n\n')
 
     return tabelaFuncao, tabelaVariaveis
 
@@ -300,7 +356,7 @@ def semanticaTiposAtribuicoes(listaErros, tree):
                     valor = int(varDireita[0])
                 except:
                     isValue = False
-                print(nosEsquerda)
+
                 if isValue:
                     message = ('WARNING', 'Aviso: Coerção implícita do valor atribuído para “' + str(nosEsquerda[0]) + '”')
                 else:
@@ -523,19 +579,17 @@ def semanticaFuncaoPrincipal(listaFuncoes, listaErros):
             
             # caso a funcao principal tenha sido chamada dentro de outra funcao
             if not listaFuncoes['principal'][0][5] <= funcoes[0] < listaFuncoes['principal'][0][6]:
-                listaErros.append(('ERROR', f'Erro: Chamada para a função principal não permitida'))
+                listaErros.append(('ERROR', 'Erro: Chamada para a função principal não permitida'))
     
-def main(file, detailed = False, showTree = False):
+def main(file, detailed = False, showTree = False, showTable = False):
     global tree, listaFuncoes, listaVariaveis, listaErros
 
     tree, listaFuncoes, listaVariaveis, listaErros, success = sintatico.main(file, d = detailed, showTree = showTree)
 
     if success:
-        tabelaFuncao, tabelaVariaveis = tabelas(listaVariaveis, listaFuncoes)
+        tabelaFuncao, tabelaVariaveis = tabelas(listaVariaveis, listaFuncoes, showTable)
         regrasSemanticas(tree, listaFuncoes, listaVariaveis, listaErros, tabelaFuncao, tabelaVariaveis)
         
         return tree
-    else:
-        print('Houve um erro nas etapas anteriores')
 
     return None

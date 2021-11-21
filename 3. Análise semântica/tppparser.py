@@ -8,9 +8,9 @@ import logging
 
 logging.basicConfig(
     level = logging.DEBUG,
-    filename = "log-parser.txt",
-    filemode = "w",
-    format = "%(filename)10s:%(lineno)4d:%(message)s"
+    filename = 'log-parser.txt',
+    filemode = 'w',
+    format = '%(filename)10s:%(lineno)4d:%(message)s'
 )
 
 log = logging.getLogger()
@@ -22,7 +22,7 @@ listaErros = []
 
 def mostrarErro(p):
     if detailedLogs:
-        print("Erro:")
+        print('Erro:')
         for i in range(len(p)):
             print("p[{}]:{}".format(i, p[i]))
         print(end='\n')
@@ -30,7 +30,7 @@ def mostrarErro(p):
     error_line = p.lineno(2)
     father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
     logging.error(
-        "Syntax error parsing index rule at line {}".format(error_line))
+        'Syntax error parsing index rule at line {}'.format(error_line))
     parser.errok()
     p[0] = father
 
@@ -229,7 +229,7 @@ def p_indice_error(p):
         | indice ABRE_COLCHETE error FECHA_COLCHETE
     '''
 
-    print("Erro na definicao do indice (expressao ou indice).\n")
+    print('Erro na definicao do indice (expressao ou indice).\n')
     mostrarErro(p)
 
 def p_tipo(p):
@@ -241,7 +241,7 @@ def p_tipo(p):
     p[0] = pai
     # p[1] = MyNode(name=p[1], type=p[1].upper(), parent=pai)
 
-    if p[1] == "inteiro":
+    if p[1] == 'inteiro':
         filho1 = MyNode(name='INTEIRO', type='INTEIRO', parent=pai)
         filho_sym = MyNode(name=p[1], type=p[1].upper(), parent=filho1)
         p[1] = filho1
@@ -264,8 +264,8 @@ def p_declaracao_funcao(p):
 def p_declaracao_funcao_error(p):
     '''declaracao_funcao :  error 
     '''
-    print("Erro ao definir a função")
-    error_line = p.lineno(2)
+    print('Erro ao definir a função.\n')
+    error_line = p.lineno(1)
     father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
     logging.error("Erro ao definir a função na linha{}".format(error_line))
     parser.errok()
@@ -403,7 +403,7 @@ def p_cabecalho_error(p):
         | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
     '''
 
-    print("Erro na definicao do cabecalho (lista de parametros, corpo ou id).\n")
+    print('Erro na definicao do cabecalho (lista de parametros, corpo ou id).\n')
     mostrarErro(p)
 
 def p_lista_parametros(p):
@@ -468,7 +468,7 @@ def p_parametro_error(p):
         | parametro ABRE_COLCHETE error
     '''
 
-    print("Erro na definicao do parametro (tipo ou parametro).\n")
+    print('Erro na definicao do parametro (tipo ou parametro).\n')
     mostrarErro(p)
 
 def p_corpo(p):
@@ -543,7 +543,7 @@ def p_se_error(p):
         | SE expressao ENTAO corpo SENAO corpo
     '''
 
-    print("Erro de definicao SE (expressao ou corpo).\n")
+    print('Erro de definicao SE (expressao ou corpo).\n')
     mostrarErro(p)
 
 def p_repita(p):
@@ -571,7 +571,7 @@ def p_repita_error(p):
         | REPITA corpo error expressao
     '''
 
-    print("Erro de definicao REPITA (expressao ou corpo).\n")
+    print('Erro de definicao REPITA (expressao ou corpo).\n')
     mostrarErro(p)
 
 def p_atribuicao(p):
@@ -619,7 +619,7 @@ def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
     '''
 
-    print("Erro de definicao LEIA (var).\n")
+    print('Erro de definicao LEIA (var).\n')
     mostrarErro(p)
 
 def p_escreva(p):
@@ -763,26 +763,26 @@ def p_operador_relacional(p):
     pai = MyNode(name='operador_relacional', type='OPERADOR_RELACIONAL')
     p[0] = pai
 
-    if p[1] == "<":
+    if p[1] == '<':
         filho = MyNode(name='MENOR', type='MENOR', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
-    elif p[1] == ">":
+    elif p[1] == '>':
         filho = MyNode(name='MAIOR', type='MAIOR', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
-    elif p[1] == "=":
+    elif p[1] == '=':
         filho = MyNode(name='IGUAL', type='IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
-    elif p[1] == "<>":
+    elif p[1] == '<>':
         filho = MyNode(name='DIFERENCA', type='DIFERENCA', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
-    elif p[1] == "<=":
+    elif p[1] == '<=':
         filho = MyNode(name='MENOR_IGUAL', type='MENOR_IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
-    elif p[1] == ">=":
+    elif p[1] == '>=':
         filho = MyNode(name='MAIOR_IGUAL', type='MAIOR_IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     else:
-        print('Erro operador relacional')
+        print('Erro operador relacional.\n')
 
     # p[1] = filho
 
@@ -791,7 +791,7 @@ def p_operador_soma(p):
         | MENOS
     '''
 
-    if p[1] == "+":
+    if p[1] == '+':
         mais = MyNode(name='MAIS', type='MAIS')
         mais_lexema = MyNode(name='+', type='SIMBOLO', parent=mais)
         p[0] = MyNode(name='operador_soma',
@@ -807,7 +807,7 @@ def p_operador_logico(p):
         | OU_LOGICO
     '''
 
-    if p[1] == "&&":
+    if p[1] == '&&':
         filho = MyNode(name='E_LOGICO', type='E_LOGICO')
         filho_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_logico',
@@ -822,7 +822,7 @@ def p_operador_negacao(p):
     '''operador_negacao : NEGACAO
     '''
 
-    if p[1] == "!":
+    if p[1] == '!':
         filho = MyNode(name='NEGACAO', type='NEGACAO')
         negacao_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_negacao',
@@ -833,7 +833,7 @@ def p_operador_multiplicacao(p):
         | DIVISAO
     '''
 
-    if p[1] == "*":
+    if p[1] == '*':
         filho = MyNode(name='MULTIPLICACAO', type='MULTIPLICACAO')
         vezes_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_multiplicacao',
@@ -869,7 +869,7 @@ def p_fator(p):
 def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
-    print("Erro de definicao do fator.\n")
+    print('Erro de definicao do fator.\n')
     mostrarErro(p)
 
 def p_numero(p):
@@ -951,9 +951,7 @@ def p_vazio(p):
 
 def p_error(p):
     if p and detailedLogs:
-        token = p
-        print("Erro: [linha: {line}, coluna: {column}]\nPróximo ao token '{token}'\n".format(
-            line=token.lineno, column=token.lineno, token=token.value))
+        print('Erro: [linha: ' + str(p.lineno) + ', coluna: ' + str(p.lexpos) + ']\nPróximo ao token “' + str(p.value) + '”.\n')
 
 def main(file, d = False, showTree = False):
     global parser, root, detailedLogs
@@ -969,7 +967,7 @@ def main(file, d = False, showTree = False):
 
     source_file = data.read()
 
-    parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
+    parser = yacc.yacc(method='LALR', optimize=True, start='programa', debug=True,
                    debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
     
     arvore = parser.parse(source_file, tracking = True)
@@ -977,24 +975,23 @@ def main(file, d = False, showTree = False):
     if root and root.children != ():
         success = True
         if showTree == True:
-            print("Generating Syntax Tree Graph...\n")
-            DotExporter(root).to_picture(argv[1] + ".ast.png")
-            UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
-            DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
-            UniqueDotExporter(root).to_dotfile(argv[1] + ".unique.ast.dot")
+            print('Arvore Sintática:\n')
+            DotExporter(root).to_picture(argv[1] + '.ast.png')
+            UniqueDotExporter(root).to_picture(argv[1] + '.unique.ast.png')
+            DotExporter(root).to_dotfile(argv[1] + '.ast.dot')
+            UniqueDotExporter(root).to_dotfile(argv[1] + '.unique.ast.dot')
             print(RenderTree(root, style=AsciiStyle()).by_attr())
-            print("Graph was generated.\nOutput file: " + argv[1] + ".ast.png")
+            print('Arvore gerada com sucesso.\nArquivo: ' + argv[1] + '.ast.png')
 
-            DotExporter(root, graph="graph",
+            DotExporter(root, graph='graph',
                         nodenamefunc=MyNode.nodenamefunc,
                         nodeattrfunc=lambda node: 'label=%s' % (node.type),
                         edgeattrfunc=MyNode.edgeattrfunc,
-                        edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
+                        edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + '.ast2.png')
 
         # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
 
     else:
-        print("\nError: unable to generate Syntax Tree.")
+        print('Não foi possível gerar a Árvore Sintática.')
 
-    print('\n')
     return root, listaFuncoes, listaVariaveis, listaErros, success
