@@ -75,7 +75,10 @@ labels = [
     'maior_igual', 
     'operador_logico',
     'operador_multiplicacao', 
-    'vezes'
+    'vezes',
+    'ABRE_PARENTESE',
+    'FECHA_PARENTESE',
+    'MAIS'
 ]
 
 def buscarNos(tree, label, listaNos):
