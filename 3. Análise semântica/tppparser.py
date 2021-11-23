@@ -35,7 +35,7 @@ def mostrarErro(p):
     p[0] = father
 
 # verifica se a variavel nao foi declarada
-def erroVariavel(node, line, adicionar=True, test = 1):
+def erroVariavel(node, line, adicionar=True):
     nos = buscarNos(node, [], 'ID')
 
     # para cada um dos nos
@@ -589,7 +589,7 @@ def p_atribuicao(p):
 
     p[3].parent = pai
 
-    erroVariavel(p.slice[0].value, p.lineno(2), True, 2)
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_leia(p):
     '''leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE
@@ -613,7 +613,7 @@ def p_leia(p):
     p[4] = filho4
 
     line = p.lineno(2)
-    erroVariavel(p.slice[0].value, line, False, 3)
+    erroVariavel(p.slice[0].value, line, False)
 
 def p_leia_error(p):
     '''leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
@@ -643,7 +643,7 @@ def p_escreva(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-    erroVariavel(p.slice[0].value, p.lineno(2), True, 4)
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_retorna(p):
     '''retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -666,7 +666,7 @@ def p_retorna(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-    erroVariavel(p.slice[0].value, p.lineno(2), True, 5)
+    erroVariavel(p.slice[0].value, p.lineno(2))
 
 def p_expressao(p):
     '''expressao : expressao_logica
