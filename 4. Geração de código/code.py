@@ -2,29 +2,34 @@ import llvmlite.binding as llvm
 import llvmlite.ir as ll
 import geracao as g
 
+# dic com as variaveis
 variaveis = {'global': []}
 
+# inicializa o modulo LLVM
+llvm.initialize()
+llvm.initialize_all_targets()
+llvm.initialize_native_target()
+llvm.initialize_native_asmprinter()
+
+# cria o modulo
+modulo = ll.Module('modulo.bc')
+modulo.triple = llvm.get_default_triple()
+
+target = llvm.Target.from_triple(modulo.triple)
+target_machine = target.create_target_machine()
+
+modulo.data_layout = target_machine.target_data
+
+escrevaInteiro = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.IntType(32)]), name="escrevaInteiro")
+leiaInteiro = ll.Function(modulo, ll.FunctionType(ll.IntType(32), []), name="leiaInteiro")
+escrevaFlutuante = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.FloatType()]), name="escrevaFlutuante")
+leiaFlutuante = ll.Function(modulo, ll.FunctionType(ll.FloatType(), []), name="leiaFlutuante")
+
+# funcao de inicio
 def codeGenerator(file, arvore, listaFuncoes, listaVariaveis, listaErros):
 
-    # inicializa o modulo LLVM
-    llvm.initialize()
-    llvm.initialize_all_targets()
-    llvm.initialize_native_target()
-    llvm.initialize_native_asmprinter()
-
     # cria o modulo
-    modulo = ll.Module(str(file) + '.bc')
-    modulo.triple = llvm.get_default_triple()
-
-    target = llvm.Target.from_triple(modulo.triple)
-    target_machine = target.create_target_machine()
-
-    modulo.data_layout = target_machine.target_data
-
-    escrevaInteiro = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.IntType(32)]), name="escrevaInteiro")
-    leiaInteiro = ll.Function(modulo, ll.FunctionType(ll.IntType(32), []), name="leiaInteiro")
-    escrevaFlutuante = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.FloatType()]), name="escrevaFlutuante")
-    leiaFlutuante = ll.Function(modulo, ll.FunctionType(ll.FloatType(), []), name="leiaFlutuante")
+    # modulo = g.iniciaModulo(file)
 
     # gera o codigo
     generate(arvore, listaVariaveis, listaFuncoes, modulo)
@@ -121,11 +126,14 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
         print('ENTROU AQUI')
         nomeFuncao = no.children[1].name
     else:
+        print('ENTROU NO ELSE: ', no.children[1].name)
         # nomeFuncao = no.children[-2].name
         nomeFuncao = no.children[1].name
 
+    # o escopo e a funcao atual
     escopo = nomeFuncao
 
+    # pego o retorno
     tipoRetorno = g.tipoLLVM(tipoFuncao)
     parametros = []
 
@@ -174,6 +182,7 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
     for variavel in listaVariaveis:
         for var in listaVariaveis[variavel]:
             if var[4] == nomeFuncao:
+                # se a variavel nao for global
                 if var[0] not in listaFuncoes[var[4]][0][3]:
                     variavelLocal(var, builder)
 
@@ -186,8 +195,15 @@ def tree(no, builder, tipoFuncao, funcao, escopo, variaveis):
 
     if no.name == 'retorna':
         retorno = True
-        g.retorna_code(no, builder, tipoFuncao, funcao, escopo, variaveis)
-        # gen_retorna_code(node, builder, type_func, func)
+        g.retorna(no, builder, tipoFuncao, funcao, escopo, variaveis)
+        return
+
+    if no.name == 'leia':
+        g.leia(no, builder, escopo, variaveis, leiaInteiro, leiaFlutuante)
+        return
+
+    if no.name == 'escreva':
+        g.escreva(no, builder, tipoFuncao, funcao, escopo, variaveis, escrevaInteiro, escrevaFlutuante)
         return
 
     for noFilho in no.children:

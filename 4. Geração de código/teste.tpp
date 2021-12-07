@@ -1,8 +1,14 @@
 inteiro: a
 inteiro: b
+flutuante: c
 
 inteiro principal()
-  a := b + 1
+  a := 2 + 1
+  c = 1.32e110
 
-  retorna(a)
+  escreva(inutil(numero))
+  retorna(a + b)
 fim
+
+inteiro inutil(inteiro: numero)
+retorna(numero)

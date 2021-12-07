@@ -25,8 +25,12 @@ def main():
     detailed = True
 
   # analise semantica
-  arvore, listaFuncoes, listaVariaveis, listaErros = sem.main(argv[1], detailed, showTree, showTable)
-
+  try:
+    arvore, listaFuncoes, listaVariaveis, listaErros = sem.main(argv[1], detailed, showTree, showTable)
+  except Exception as e:
+    print('Aconteceu um erro:', e)
+    return
+    
   if None != arvore:
     err = False
 

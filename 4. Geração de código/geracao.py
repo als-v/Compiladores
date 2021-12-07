@@ -1,6 +1,32 @@
 import llvmlite.binding as llvm
 import llvmlite.ir as ll
 
+
+# funcao para criacao do modulo
+def iniciaModulo(file):
+
+    # inicializa o modulo LLVM
+    llvm.initialize()
+    llvm.initialize_all_targets()
+    llvm.initialize_native_target()
+    llvm.initialize_native_asmprinter()
+
+    # cria o modulo
+    modulo = ll.Module(str(file) + '.bc')
+    modulo.triple = llvm.get_default_triple()
+
+    target = llvm.Target.from_triple(modulo.triple)
+    target_machine = target.create_target_machine()
+
+    modulo.data_layout = target_machine.target_data
+
+    escrevaInteiro = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.IntType(32)]), name="escrevaInteiro")
+    leiaInteiro = ll.Function(modulo, ll.FunctionType(ll.IntType(32), []), name="leiaInteiro")
+    escrevaFlutuante = ll.Function(modulo, ll.FunctionType(ll.VoidType(), [ll.FloatType()]), name="escrevaFlutuante")
+    leiaFlutuante = ll.Function(modulo, ll.FunctionType(ll.FloatType(), []), name="leiaFlutuante")
+
+    return modulo
+
 # checa a variavel, e retorna ela
 def checarVariavel(variavel, variaveis, escopo):
     for var in variaveis['global']:
@@ -26,7 +52,7 @@ def pegarVariavel(variavel, escopo, variaveis):
     return variavelAchada
 
 # realiza o bloco final do programa
-def retorna_code(no, builder, tipoFuncao, funcao, escopo, variaveis):
+def retorna(no, builder, tipoFuncao, funcao, escopo, variaveis):
     
     # bloco final
     bloco_final = funcao.append_basic_block('exit')
@@ -45,11 +71,37 @@ def retorna_code(no, builder, tipoFuncao, funcao, escopo, variaveis):
         variavelEsquerda = pegarVariavel(variavelEsquerda, escopo, variaveis)
         variavelDireita = pegarVariavel(variavelDireita, escopo, variaveis)
 
+        print(variavelEsquerda, operacao, variavelDireita)
         # se for operacao de soma
         if operacao == '+':
             try:
                 builder.ret(builder.add(variavelEsquerda, variavelDireita))
             except:
+                # problema ao declarar uma valor que nao é uma variavel
+                pass
+
+        # se for operacao de subtração
+        elif operacao == '-':
+            try:
+                builder.ret(builder.sub(variavelEsquerda, variavelDireita))
+            except:
+                # problema ao declarar uma valor que nao é uma variavel
+                pass
+
+        # se for operacao de multiplicação
+        elif operacao == '*':
+            try:
+                builder.ret(builder.mul(variavelEsquerda, variavelDireita))
+            except:
+                # problema ao declarar uma valor que nao é uma variavel
+                pass
+
+        # se for operacao de divisão
+        elif operacao == '/':
+            try:
+                builder.ret(builder.sdiv(variavelEsquerda, variavelDireita))
+            except:
+                # problema ao declarar uma valor que nao é uma variavel
                 pass
 
     # se nao tiver mais de um parametro  
@@ -89,6 +141,38 @@ def retorna_code(no, builder, tipoFuncao, funcao, escopo, variaveis):
 
             builder.ret(var)
 
+# metodo leia
+def leia(no, builder, escopo, variaveis, leiaInteiro, leiaFlutuante):
+    variavel = pegarVariavel(no.children[0].name, escopo, variaveis)
+
+    tipoVariavel = variavel.type.pointee.intrinsic_name
+
+    if tipoVariavel == 'i32':
+        resultado = builder.call(leiaInteiro, [])
+    else:
+        resultado = builder.call(leiaFlutuante, [])
+
+    builder.store(resultado, variavel, align=4)
+
+# metodo escreva
+def escreva(no, builder, tipoFuncao, funcao, escopo, variaveis, escrevaInteiro, escrevaFlutuante):
+    print(no.children)
+    variavel = pegarVariavel(no.children[0].name, escopo, variaveis)
+
+    if None != variavel:
+        tipo = variavel.type.pointee.intrinsic_name
+
+    if tipo == 'i32':
+        try:
+            builder.call(escrevaInteiro, [variavel])
+        except:
+            builder.call(escrevaInteiro, [builder.load(variavel)])
+    elif tipo == 'f32':
+        try:
+            builder.call(escrevaFlutuante, [variavel])
+        except:
+            builder.call(escrevaFlutuante, [builder.load(variavel)])
+        
 # funcao que retorna o tipo da variavel
 def tipoLLVM(tipo):
 
