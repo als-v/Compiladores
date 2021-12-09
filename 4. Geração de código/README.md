@@ -8,9 +8,10 @@
 - logging: Este módulo define funções e classes que implementam um sistema de logs flexíveis.
 
 ## Para rodar deve-se executar o comando:
-```python3 main.py [arquivo.tpp] [detailed] [showTree] [showTable]```
+```python3 main.py [arquivo.tpp] [detailed] [showTree] [showTable] [showModule]```
 
 Onde, o arquivo.tpp é o arquivo para a análise, e os parâmetros:
 - 'detailed' é um parâmetro opcional que indica se a saída deve ser detalhada ou não.
 - 'showTree' é um parâmetro opcional que indica se a saída deve apresentar a arvore sintatática e a arvore sintática abstrata.
 - 'showTable' é um parâmetro opcional que indica se a saída deve apresentar a tabela de símbulos.
+- 'showModule' é um parâmetro opcional que indica se a saída deve apresentar o modulo gerado.
