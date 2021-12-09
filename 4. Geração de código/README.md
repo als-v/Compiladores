@@ -6,6 +6,7 @@
 - mytree: Este módulo fornece estruturas de dados: arvores prontas para serem utilizadas. 
 - anytree: Este módulo fornece estruturas de dados: arvores prontas para serem utilizadas. 
 - logging: Este módulo define funções e classes que implementam um sistema de logs flexíveis.
+- llvmlite: Este módulo é necessário para escrever compiladores JIT.
 
 ## Para rodar deve-se executar o comando:
 ```python3 main.py [arquivo.tpp] [detailed] [showTree] [showTable] [showModule]```
