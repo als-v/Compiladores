@@ -1,6 +1,6 @@
 inteiro: ano
 
-inteiro modulo(inteiro:numerador,denominador)
+inteiro modulo(inteiro:numerador, inteiro: denominador)
 	se (numerador < denominador) então
 	  retorna (numerador)
 	fim

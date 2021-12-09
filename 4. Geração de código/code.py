@@ -1179,7 +1179,12 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 expressaoT = pegarVariavel(direita[idx])
 
                 if 'i32' in str(tipo):
-                    expressaoT = builder.load(expressaoT)
+                    
+                    try:
+                        expressaoT = builder.load(expressaoT)
+
+                    except:
+                        pass
 
                 valorT = direita[idx]
 
@@ -1244,7 +1249,28 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
             
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
-                expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                
+                try:
+                    expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                
+                except:
+
+                    try:
+                        expressao = builder.fadd(builder.load(expressao), expressaoT, name='expressao', flags=())
+                    
+                    except:
+
+                        try:
+                            expressao = builder.fadd(expressao, builder.load(expressaoT), name='expressao', flags=())
+                        
+                        except:
+
+                            try:
+                                expressao = builder.fadd(builder.load(expressao), builder.load(expressaoT), name='expressao', flags=())
+
+                            except:
+                                print('Erro ao somar')
+                                pass
 
             # caso ambos forem inteiros
             elif 'i32' in expressao.type.intrinsic_name and 'i32' in expressaoT.type.intrinsic_name:
