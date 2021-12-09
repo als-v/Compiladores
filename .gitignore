@@ -4,6 +4,8 @@ lextab.py
 *.ast.dot
 *.ast.png
 *ast2.png
+*.ll
+*.o
 
 conjunto_teste/
 *.txt

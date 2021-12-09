@@ -224,8 +224,13 @@ def p_indice(p):
         filho_sym3 = MyNode(name=p[3], type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
+# def p_indice_error(p):
+#     '''indice : ABRE_COLCHETE error FECHA_COLCHETE
+#         | indice ABRE_COLCHETE error FECHA_COLCHETE
+#     '''
 def p_indice_error(p):
-    '''indice : ABRE_COLCHETE error FECHA_COLCHETE
+    '''indice : error ABRE_COLCHETE expressao FECHA_COLCHETE 
+        | ABRE_COLCHETE error FECHA_COLCHETE
         | indice ABRE_COLCHETE error FECHA_COLCHETE
     '''
 
@@ -869,6 +874,7 @@ def p_fator(p):
 def p_fator_error(p):
     '''fator : ABRE_PARENTESE error FECHA_PARENTESE
     '''
+    
     print('Erro de definicao do fator.\n')
     mostrarErro(p)
 

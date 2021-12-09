@@ -66,19 +66,20 @@ labels = [
     'SE', 
     'ENTAO', 
     'SENAO', 
-    'maior',
-    'menor', 
+    'MAIOR',
+    'MENOR', 
     'REPITA', 
-    'igual', 
+    'IGUAL', 
     'menos', 
-    'menor_igual', 
-    'maior_igual', 
+    'MENOR_IGUAL', 
+    'MAIOR_IGUAL', 
     'operador_logico',
     'operador_multiplicacao', 
     'vezes',
     'ABRE_PARENTESE',
     'FECHA_PARENTESE',
-    'MAIS'
+    'MAIS',
+    'MENOS'
 ]
 
 def buscarNos(tree, label, listaNos):

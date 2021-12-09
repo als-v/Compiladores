@@ -13,6 +13,9 @@ def main():
   # flag para mostrar os erros detalhados
   detailed = False
 
+  # flag para mostrar o modulo
+  showModule = False
+
   # arquivo .tpp
   aux = argv[1].split('.')
   if aux[-1] != 'tpp':
@@ -23,6 +26,8 @@ def main():
     showTable = True
   if 'detailed' in argv:
     detailed = True
+  if 'showModule' in argv:
+    showModule = True
 
   # analise semantica
   try:
@@ -32,7 +37,7 @@ def main():
     return
     
   if None != arvore:
-    err = False
+    erro = False
 
     for err in listaErros:
       if 'ERROR' in listaErros[0]:
@@ -40,8 +45,8 @@ def main():
         err = True
         break
 
-    if not err:
-      codeGenerator(argv[1], arvore, listaFuncoes, listaVariaveis, listaErros)
+    if not erro:
+      codeGenerator(argv[1], arvore, listaFuncoes, listaVariaveis, listaErros, showModule)
   
   else:
     print('\nHouve um erro ao realizar o processo')

@@ -1,14 +1,13 @@
 inteiro: a
-inteiro: b
-flutuante: c
 
 inteiro principal()
-  a := 2 + 1
-  c = 1.32e110
+  inteiro: b
 
-  escreva(inutil(numero))
-  retorna(a + b)
+  a := 10
+  b := a
+
+  retorna(b)
 fim
 
-inteiro inutil(inteiro: numero)
-retorna(numero)
+
+
