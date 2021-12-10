@@ -75,6 +75,7 @@ labels = [
     'MAIOR_IGUAL', 
     'operador_logico',
     'operador_multiplicacao', 
+    'MULTIPLICACAO', 
     'vezes',
     'ABRE_PARENTESE',
     'FECHA_PARENTESE',

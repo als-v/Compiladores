@@ -228,9 +228,9 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
 
         # pego o nome do parametro
         funcao.args[idx].name = listaFuncoes[nomeFuncao][0][3][idx]
-
+        
         # se nao existir a variavel, cria
-        if nomeFuncao not in listaVariaveis:
+        if nomeFuncao not in variaveis:
             variaveis[nomeFuncao] = []
             funcoes[nomeFuncao] = []
         
@@ -253,19 +253,20 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
 
                 # se a variavel nao for global
                 if var[0] not in listaFuncoes[var[4]][0][3]:
+                    
 
                     # declaro a variavel local
                     variavelLocal(var, builder)
                 
                 # caso seja global
                 else:
-                    
+
                     # verifico as variaveis declaradas na funcao
                     for varFuncao in variaveis[nomeFuncao]:
 
                         # caso ela nao tenha sido declarada
                         if var[0] not in varFuncao:
-
+                            
                             # declaro a variavel local
                             variavelLocal(var, builder)
 
@@ -406,7 +407,7 @@ def repita(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     # variaveis auxiliares
     tipoInt = ll.IntType(32)
 
-    varComper = builder.alloca(ll.IntType(32), name='var_comper')
+    varComper = builder.alloca(ll.IntType(32), name='var_comparacao')
     valueExists = True
 
     # para cada um
@@ -493,23 +494,26 @@ def repita(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
 def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     
     # quantidade de condicoes
-    if no.children[0].name == 'corpo' and no.children[0].name == 'corpo':
-        condicoes = 1
-    elif no.children[1].name == 'corpo':
+    if no.children[1].name == 'corpo':
         condicoes = 2
     else:
         condicoes = 1
 
     # crio um bloco para cada condicao
-    if condicoes == 2:
-        seTrue = funcao.append_basic_block('iftrue')
-        seFalse = funcao.append_basic_block('iffalse')
-        seEnd = funcao.append_basic_block('ifend')
-    else:
-        seTrue = funcao.append_basic_block('iftrue')
-        seEnd = funcao.append_basic_block('ifend')
+    # if condicoes == 2:
+    #     seTrue = funcao.append_basic_block('iftrue')
+    #     seFalse = funcao.append_basic_block('iffalse')
+    #     seEnd = funcao.append_basic_block('ifend')
+    # else:
+    #     seTrue = funcao.append_basic_block('iftrue')
+    #     seEnd = funcao.append_basic_block('ifend')
+
+    seTrue = funcao.append_basic_block('iftrue')
+    seFalse = funcao.append_basic_block('iffalse')
+    seEnd = funcao.append_basic_block('ifend')
 
     comparacoes = []
+
     comparacoes.append(no.children[3].name)
 
     tipoComparacao = no.children[2].children[0].name
@@ -522,8 +526,10 @@ def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     comparacoes.append(no.children[4].name)
 
     tipoInteiro = ll.IntType(32)
-    varComperRight = builder.alloca(ll.IntType(32), name='var_comper_right')
-    varComperLeft = builder.alloca(ll.IntType(32), name='var_comper_left')
+    tipoFlutuante = ll.FloatType()
+
+    varComperRight = builder.alloca(ll.IntType(32), name='var_comparacao_right')
+    varComperLeft = builder.alloca(ll.IntType(32), name='var_comparacao_left')
 
     # passo por cada um
     for idx in range(len(comparacoes)):
@@ -534,16 +540,24 @@ def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
 
         # caso seja um valor inteiro/flutuante
         elif pegarVariavel(comparacoes[idx]) == None:
-            
+
             # realizo a conversao para inteiro/flutuante
             try:
                 value = int(comparacoes[idx])
+                tipoLabel = 'inteiro'
+
             except:
-                value = int(comparacoes[idx+1])
+                value = float(comparacoes[idx])
+                tipoLabel = 'flutuante'
 
             # armazeno o valor na variavel
-            builder.store(tipoInteiro(value), varComperRight)
-            comparacoes[idx] = ll.Constant(tipoInteiro, tipoInteiro(value))
+            if tipoLabel == 'inteiro':
+                builder.store(tipoInteiro(value), varComperRight)
+                comparacoes[idx] = ll.Constant(tipoInteiro, tipoInteiro(value))
+            
+            elif tipoLabel == 'flutuante':
+                builder.store(tipoFlutuante(value), varComperRight)
+                comparacoes[idx] = ll.Constant(tipoFlutuante, tipoFlutuante(value))
 
         # caso a variavel exista
         else:
@@ -552,19 +566,25 @@ def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
             comparacoes[idx] = pegarVariavel(comparacoes[idx])
 
             # armazeno o valor na variavel
-            if comparacoes[idx].type.intrinsic_name == 'p0i32':
+            if 'i32' in comparacoes[idx].type.intrinsic_name:
                 varComperLeft = comparacoes[idx]
 
             else:
                 builder.store(comparacoes[idx], varComperLeft)
+    
+    try:
+        varComperLeft = builder.load(varComperLeft)
+    except:
+        pass
 
     # comparacao
-    ifState = builder.icmp_signed(tipoComparacao, varComperLeft, varComperRight, name='if_state')
+    ifState = builder.icmp_signed(tipoComparacao, varComperLeft, builder.load(varComperRight), name='if_state')
+    builder.cbranch(ifState, seTrue, seFalse)
 
-    if condicoes == 2:
-        builder.cbranch(ifState, seTrue, seFalse)
-    else:
-        builder.cbranch(ifState, seTrue, seEnd)
+    # if condicoes == 2:
+    #     builder.cbranch(ifState, seTrue, seFalse)
+    # else:
+    #     builder.cbranch(ifState, seTrue, seEnd)
 
     builder.position_at_end(seTrue)
 
@@ -1075,8 +1095,10 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
     # variaveis auxiliares
     idx = 0
-    next_operation = 'add'
 
+    operacao = '+'
+
+    print(esquerda, direita)
     # enquanto tiver 'operacoes'
     while idx < len(direita):
 
@@ -1090,7 +1112,7 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
         # caso nao for operacao
         if direita[idx] != '+' and direita[idx] != '-' and direita[idx] != '*':
-
+            
             # caso nao for inteiro
             if 'i32' not in str(tipo):
 
@@ -1133,6 +1155,7 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         nomeParam = listaFuncoes[direita[idx]][0][3][aux]
                         tipoParam = listaVariaveis[nomeParam][0][1]
 
+                        print('nome: ', nomeParam)
                         # se for inteiro/flutuante
                         if tipoParam == 'inteiro':
                             valorParam = int(direita[nxtIdx])
@@ -1143,14 +1166,15 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
                     # caso nao existe
                     elif pegarVariavel(direita[nxtIdx]) == None:
-
+                        
                         try:
                             # pego seu valor
                             valorParam = float(direita[nxtIdx])
                             args.append(ll.Constant(ll.FloatType(), valorParam))
 
                         except:
-                            pass
+                            if direita[nxtIdx] in variaveis:
+                                pass
 
                     # caso exista
                     else:
@@ -1162,12 +1186,13 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 
                 tipo = listaFuncoes[direita[idx]][0][1]
                 
-                if tipo == 'inteiro':
-                    tipo = ll.IntType(32)
-                else:
-                    tipo = ll.FloatType()
+                # if tipo == 'inteiro':
+                #     tipo = ll.IntType(32)
+                # else:
+                #     tipo = ll.FloatType()
                 
                 try:
+                    print(funcao, args)
                     expressaoT = builder.call(funcao, args)
                 except:
                     pass
@@ -1175,106 +1200,255 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 # incremento
                 idx += idx + numVar
             
+            # elif pegarVariavel(direita[idx]) == None:
+            #     print('É VALOR', direita[idx])
+            #     expressaoT = pegarVariavel(direita[idx])
+
+            #     if 'i32' in str(tipo):
+                    
+            #         try:
+            #             expressaoT = builder.load(expressaoT)
+
+            #         except:
+            #             pass
+
+            #     valorT = direita[idx]
+
+            # caso não for variavel, e sim valor
             elif pegarVariavel(direita[idx]) != None:
-                expressaoT = pegarVariavel(direita[idx])
+                print('É VALOR 2:', tipo, direita[idx])
 
-                if 'i32' in str(tipo):
-                    
+                # se for inteiro
+                if 'i32' in str(tipo) or 'f32' in str(tipo):
+
+                    # arranjo
                     try:
-                        expressaoT = builder.load(expressaoT)
+                        if len(direita) > idx and direita[idx+1] == '[':
 
-                    except:
-                        pass
+                            temMais = False
+                            ePrimeiro = False
 
-                valorT = direita[idx]
+                            if idx == 0:
+                                print('É PRIMEIRO')
+                                ePrimeiro = True
 
-        # caso não for variavel, e sim valor
-        elif pegarVariavel(direita[idx]) != None:
+                            if len(direita) > idx+3:
+                                temMais = True
+                        
+                            # variaveis auxiliriares
+                            arrVar = direita[idx]
+                            idxVar = direita[idx+2]
+                            print('OLHA AQUI: \nGAP: ', arrVar, ' | IDX: ', idxVar, ' | ', idx)
 
-            # se for inteiro
-            if 'i32' in str(tipo):
+                            # pego o arranjo
+                            arrVar = pegarVariavel(arrVar)
+                            idxVarLoad = builder.load(pegarVariavel(idxVar))
 
-                # arranjo
-                if len(direita) > idx and direita[idx+1] == '[':
+                            # salvo o valor
+                            arrayVar = builder.gep(arrVar, [idxVarLoad], name=str(direita[idx])+'['+str(direita[idx+2])+']')
+                            expressaoT = builder.load(arrayVar, align=4)
 
-                    # variaveis auxiliriares
-                    arrVar = direita[idx]
-                    idxVar = direita[idx+2]
-
-                    # pego o arranjo
-                    arrVar = pegarVariavel(arrVar)
-                    idxVarLoad = builder.load(pegarVariavel(idxVar))
-
-                    # salvo o valor
-                    arrVarPos = builder.gep(arrVar, [tipoInt(0), idxVarLoad], name=str(direita[idx])+'['+str(direita[idx+2])+']')
-                    expressaoT = builder.load(arrVarPos, align=4)
-
-                    # incremento
-                    idx += 3
-                
-                # caso nao seja arranjo
-                else:
-                    
-                    try:
-                        # carrego o valor da variavel
-                        expressaoT = builder.load(pegarVariavel(direita[idx+1]))
-
-                    except:
-                        # carrego o valor da variavel
-                        expressaoT = pegarVariavel(direita[idx+1])
-
-                        # caso nao exista
-                        if None == expressaoT:
-                            label = '' 
-
-                            # converto para inteiro/flutuante para descobrir seu tipo
-                            try:
-                                valor = int(direita[idx+1])
-                                label = 'inteiro'
-                            except:
-                                valor = float(direita[idx+1])
-                                label = 'flutuante'
+                            # incremento
+                            idx += 3
+                        
+                        # caso nao seja arranjo
+                        # elif direita[idx-1] == '[' and direita[idx+1] == ']':
+                        #     pass
+                        else:
                             
-                            # crio a variavel inteiro/flutuante
-                            if label == 'inteiro':
-                                expressaoT = ll.Constant(ll.IntType(32), valor)
-                                valorT = valor
+                            try:
+                                # carrego o valor da variavel
+                                expressaoT = builder.load(pegarVariavel(direita[idx]))
 
-                            else:
-                                expressaoT = ll.Constant(ll.FloatType(), valor)
-                                valorT = valor
-        
+                            except:
+                                # carrego o valor da variavel
+                                expressaoT = pegarVariavel(direita[idx])
+
+                                # # caso nao exista
+                                # if None == expressaoT:
+                                #     label = '' 
+
+                                #     # converto para inteiro/flutuante para descobrir seu tipo
+                                #     try:
+                                #         valor = int(direita[idx])
+                                #         label = 'inteiro'
+                                #     except:
+                                #         valor = float(direita[id1])
+                                #         label = 'flutuante'
+                                    
+                                #     # crio a variavel inteiro/flutuante
+                                #     if label == 'inteiro':
+                                #         expressaoT = ll.Constant(ll.IntType(32), valor)
+                                #         valorT = valor
+
+                                #     else:
+                                #         expressaoT = ll.Constant(ll.FloatType(), valor)
+                                #         valorT = valor
+                    except:
+
+                            try:
+                                # carrego o valor da variavel
+                                expressaoT = builder.load(pegarVariavel(direita[idx]))
+
+                            except:
+                                # carrego o valor da variavel
+                                expressaoT = pegarVariavel(direita[idx])
         # caso seja soma
-        if next_operation == 'add':
-            
+        if operacao == '+':
+            print('SOMA')
+
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
                 
-                try:
-                    expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                if len(esquerda) == 1 and len(direita) == 1:
+                    builder.store(expressaoT, variavel)
                 
-                except:
-
-                    try:
-                        expressao = builder.fadd(builder.load(expressao), expressaoT, name='expressao', flags=())
+                else:
                     
-                    except:
+                    if len(direita) > 3:
+                        # valid = str(expressao).split(' ')[len(str(expressao).split(' '))-1]
 
-                        try:
-                            expressao = builder.fadd(expressao, builder.load(expressaoT), name='expressao', flags=())
+                        if ePrimeiro:
+                            # indice = builder.load(var)
+
+                            # print('expressaoT: ', expressaoT)
+                            # valor = builder.gep(expressaoT, [indice])
+                            # if '0x0' not in valid:
+                            print('PRIMEIROOOOOOOOOOOOOOOOOOOOOOOOOO')
+                            builder.store(expressaoT, variavel)
+                            ePrimeiro = False
+
+                        else:
+                            
+                            # if '0x0' not in valid:
+                            valor = builder.fadd(expressaoT, builder.load(variavel, align=4))
+                            builder.store(valor, variavel)
+
+
+
+                        # valid = str(expressao).split(' ')[len(str(expressao).split(' '))-1])
                         
-                        except:
+                        # if valid == '0x0':
+                        #     storeExpressaoEsquerda = expressaoT
+                        # elif valid != '0x0':
+                        #     valid = str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1])
 
-                            try:
-                                expressao = builder.fadd(builder.load(expressao), builder.load(expressaoT), name='expressao', flags=())
+                        #     if valid == '0x0':
+                        #         storeExpressaoDireita = expressao
+                        
+                        # expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                        # builder.store(expressao, variavel)
+                        # print('aqui float: ', esquerda, direita)
+                       
+                        # indice = str(var).split('"')[2]
+                        # # expressao = builder.load(var)
+                        # # print('e:', expressao)
+                        # # variavel = builder.gep(variavelEsquerda, [expressao])
+                        # # print('v', variavelEsquerda)
+                        # int_ty = ll.IntType(32)
 
-                            except:
-                                print('Erro ao somar')
-                                pass
+                        # vEsquerda = pegarVariavel(direita[0])
+                        # print('a: ', vEsquerda)
+
+                        # if direita[2] == indice:
+                        #     print('var')
+                        #     indiceEsquerda = var
+                        # else:    
+                        #     indiceEsquerda = builder.load(pegarVariavel(direita[2]), align=4)
+                        # print('i: ', indiceEsquerda)
+                        
+                        # vEsquerda = builder.gep(vEsquerda, [indiceEsquerda])
+                        # print('a completo: ', vEsquerda)
+
+                        # vDireita = pegarVariavel(direita[5])
+                        # print('b: ', vDireita)
+
+                        # if direita[2] == direita[7]:
+                        #     print('var')
+                        #     indiceDireita = indiceEsquerda
+                        # elif direita[2] != direita[7] and direita[2] == indice:
+                        #     indicedireita = var
+                        # else:
+                        #     indiceDireita = builder.load(pegarVariavel(direita[7]), align=4)
+                        # print('i: ', indiceDireita)
+
+                        # vDireita = builder.gep(vDireita, [indiceDireita])
+                        # print('b completo: ', vDireita)
+
+                        # operacao = direita[4]
+                        
+                        # auxAdd = builder.fadd(vEsquerda, vDireita, name='expressao', flags=())
+                        # print('operacao: ', builder.load(vEsquerda))
+                        # # addResult = builder.store(auxAdd, variavel)
+
+                        # if '[' in esquerda:
+                        #     # auxVariavel = pegarVariavel(esquerda[0])
+                        #     # valueVariavel = builder.load(pegarVariavel(esquerda[2]), align=4)
+
+                        #     # labelVariavel = builder.gep(auxVariavel, [valueVariavel])
+                        #     print('AQUI: ', variavel)
+
+                        #     builder.store(builder.load(auxAdd), variavel)
+
+                        # else:
+                        #     builder.store(auxAdd, variavel)
+
+                        
+                    else:
+
+                                                    
+                        if str(expressao).split(' ')[len(str(expressao).split(' '))-1]  == 0 or str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1] == 0:
+                            pass
+                        else:
+                            expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                            builder.store(expressao, variavel)
+
+                # try:
+                #     expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                
+                # except:
+
+                #     try:
+                #         expressao = builder.fadd(builder.load(expressao), expressaoT, name='expressao', flags=())
+                    
+                #     except:
+
+                #         try:
+                #             expressao = builder.fadd(expressao, builder.load(expressaoT), name='expressao', flags=())
+                        
+                #         except:
+
+                #             try:
+                #                 expressao = builder.fadd(builder.load(expressao), builder.load(expressaoT), name='expressao', flags=())
+
+                #             except:
+                #                 print('Erro ao somar')
+                #                 pass
 
             # caso ambos forem inteiros
             elif 'i32' in expressao.type.intrinsic_name and 'i32' in expressaoT.type.intrinsic_name:
-                expressao = builder.add(expressao, expressaoT, name='expressao', flags=())
+
+                if len(esquerda) == 1 and len(direita) == 1:
+                    builder.store(expressaoT, variavel)
+                
+                else:
+                    
+                    if len(direita) > 3:
+                        
+                        if '[' in direita:
+                            pass
+
+                    else:
+
+                        if str(expressao).split(' ')[len(str(expressao).split(' '))-1] == 0 or str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1] == 0:
+                            pass
+                        else:
+                            print('olha aqui: ', expressao, ' || ', expressaoT, ' || ', variavel)
+                            expressao = builder.add(expressao, expressaoT, name='expressao', flags=())
+                            try:
+                                builder.store(expressao, variavel)
+                            except:
+                                pass
 
             # caso tenha os dois tipos
             else:
@@ -1283,16 +1457,46 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 if 'i32' in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
                     valorAlt = float(valorT)
                     expressaoT = ll.Constant(ll.FloatType(), valorAlt)
-                    expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+
+                    if len(esquerda) == 1 and len(direita) == 1:
+                        builder.store(expressaoT, variavel)
+                    
+                    else:
+                        
+                        if len(direita) > 3:
+                            pass
+                            
+                        else:
+
+                            if str(expressao).split(' ')[len(str(expressao).split(' '))-1]  == 0 or str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1] == 0:
+                                pass
+                            else:
+                                expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                                builder.store(expressao, variavel)
 
                 # se um for inteiro e outro flutuante
                 elif 'i32' in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
                     valorAlt = float(valorE)
                     expressao = ll.Constant(ll.FloatType(), valorAlt)
-                    expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+
+                    if len(esquerda) == 1 and len(direita) == 1:
+                        builder.store(expressaoT, variavel)
+                    
+                    else:
+                        
+                        if len(direita) > 3:
+                            pass
+                            
+                        else:
+                            
+                            if str(expressao).split(' ')[len(str(expressao).split(' '))-1]  == 0 or str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1] == 0:
+                                pass
+                            else:
+                                expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
+                                builder.store(expressao, variavel)
 
         # caso seja subtracao
-        if next_operation == 'sub':
+        if operacao == '-':
             
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
@@ -1300,7 +1504,17 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
             # caso ambos forem inteiros
             elif 'i32'  in expressao.type.intrinsic_name and  'i32' in expressaoT.type.intrinsic_name:
-                expressao = builder.sub(expressao, expressaoT, name='expressao', flags=())
+                
+                if len(esquerda) == 1 and len(direita) == 1:
+                    builder.store(expressaoT, variavel)
+                
+                else:
+                    print('olha aqui: ', expressao, ' || ', expressaoT, ' || ', variavel)
+                    try:
+                        expressao = builder.sub(expressao, expressaoT, name='expressao', flags=())
+                        builder.store(expressao, variavel)
+                    except:
+                        pass
 
             # caso tenha os dois tipos
             else:
@@ -1318,7 +1532,7 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                     expressao = builder.fsub(expressao, expressaoT, name='expressao', flags=())
 
         # caso seja multiplicacao
-        elif next_operation == 'mul':
+        elif operacao == '*':
 
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
@@ -1350,15 +1564,15 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
             try:
                 # soma
                 if direita[idx] == '+':
-                    next_operation = 'add'
+                    operacao = '+'
                 
                 # subtracao
                 elif direita[idx] == '-':
-                    next_operation = 'sub'
+                    operacao = '-'
 
                 # multiplicacao
                 elif direita[idx] == '*':
-                    next_operation = 'mul'
+                    operacao = '*'
 
             except:
                 pass
@@ -1366,9 +1580,9 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
         # incremento
         idx+=1
     
-    try:
-        # salvo
-        builder.store(expressao, variavel)
-    except:
-        # erro aqui **
-        pass
+    # try:
+    #     # salvo
+    #     builder.store(expressao, variavel)
+    # except:
+    #     # erro aqui **
+    #     pass
