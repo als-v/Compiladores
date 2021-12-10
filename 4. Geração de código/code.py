@@ -35,7 +35,68 @@ def codeGenerator(file, arvore, listaFuncoes, listaVariaveis, listaErros, showMo
 
         # se for uma declaracao de variavel
         if no.name == 'declaracao_variaveis':
-            variavel(no, listaVariaveis, modulo)
+
+            # variaveis auxiliares
+            sucesso = True
+            varTipo = no.children[0].name
+            varNome = no.children[1].name
+            dimensao = 0
+            dimensoes = []
+
+            # pego a variavel
+            for var in listaVariaveis[varNome]:
+
+                # verifico se ela é global
+                if var[1] == varTipo and var[4] == 'global':
+                    sucesso = True
+                    varDimensao = var[2]
+                    dimensoes = var[3]
+            
+            # caso seja global
+            if sucesso:
+
+                # tipo de variavel
+                if varTipo == "inteiro":
+                    varLLVMTipo = ll.IntType(32)
+                
+                # se for flutuante
+                elif varTipo == "flutuante":
+                    varLLVMTipo = ll.FloatType()
+
+                # se for void
+                else:
+                    varLLVMTipo = ll.VoidType()
+
+                # caso tiver mais de uma dimensao
+                if dimensao > 0:
+                    varLLVMTipo = ll.IntType(32)
+
+                    # declara cada uma delas
+                    for dimensao in dimensoes:
+                        varLLVMTipo = ll.ArrayType(varLLVMTipo, int(dimensao[0]))
+                    
+                # cria a variavel
+                var = ll.GlobalVariable(modulo, varLLVMTipo, varNome)
+
+                # se for apenas uma dimensao
+                if dimensao == 0:
+                    
+                    # se for inteiro/flutuante
+                    if varTipo == 'inteiro':
+                        var.initializer = ll.Constant(varLLVMTipo, 0)
+                    else:
+                        var.initializer = ll.Constant(varLLVMTipo, 0.0)
+
+                # declarar a variavel como None
+                else:
+                    var.initializer = ll.Constant(varLLVMTipo, None)
+
+                # linkagem/alinhamento
+                var.linkage = 'common'
+                var.align = 4
+
+                # salvo a variavel nao dic aux
+                variaveis['global'].append({varNome: var})
 
         # se for uma declaracao de funcao
         if no.name == 'declaracao_funcao':
@@ -55,70 +116,23 @@ def codeGenerator(file, arvore, listaFuncoes, listaVariaveis, listaErros, showMo
     # executo funcoes 
     g.run(file)
 
-# funcao para declarar variaveis globais
-def variavel(no, listaVariaveis, modulo):
-
-    # variaveis auxiliares
-    sucesso = True
-    varTipo = no.children[0].name
-    varNome = no.children[1].name
-    dimensao = 0
-    dimensoes = []
-
-    # pego a variavel
-    for var in listaVariaveis[varNome]:
-
-        # verifico se ela é global
-        if var[1] == varTipo and var[4] == 'global':
-            sucesso = True
-            varDimensao = var[2]
-            dimensoes = var[3]
-    
-    # caso seja global
-    if sucesso:
-
-        # tipo de variavel
-        varLLVMTipo = g.tipoLLVM(varTipo)
-
-        # caso tiver mais de uma dimensao
-        if dimensao > 0:
-            varLLVMTipo = ll.IntType(32)
-
-            # declara cada uma delas
-            for dimensao in dimensoes:
-                varLLVMTipo = ll.ArrayType(varLLVMTipo, int(dimensao[0]))
-            
-        # cria a variavel
-        var = ll.GlobalVariable(modulo, varLLVMTipo, varNome)
-
-        # se for apenas uma dimensao
-        if dimensao == 0:
-            
-            # se for inteiro/flutuante
-            if varTipo == 'inteiro':
-                var.initializer = ll.Constant(varLLVMTipo, 0)
-            else:
-                var.initializer = ll.Constant(varLLVMTipo, 0.0)
-
-        # declarar a variavel como None
-        else:
-            var.initializer = ll.Constant(varLLVMTipo, None)
-
-        # linkagem/alinhamento
-        var.linkage = 'common'
-        var.align = 4
-
-        # salvo a variavel nao dic aux
-        variaveis['global'].append({varNome: var})
-
 # funcao para declarar variaveis locais
 def variavelLocal(var, builder):
 
-    # pega o tipo da variavel
-    tipoVar = g.tipoLLVM(var[1])
+    # se for inteiro
+    if var[1] == "inteiro":
+        tipoVar = ll.IntType(32)
+    
+    # se for flutuante
+    elif var[1] == "flutuante":
+        tipoVar = ll.FloatType()
+
+    # se for void
+    else:
+        tipoVar = ll.VoidType()
 
     if var[2] > 0:
-        tipoVar = g.tipoLLVM('inteiro')
+        tipoVar = ll.IntType(32)
 
         for dimensao in var[3]:
             tipoVar = ll.ArrayType(tipoVar, int(dimensao[0]))
@@ -167,8 +181,18 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
     # o escopo e a funcao atual
     escopo = nomeFuncao
 
-    # pego o retorno
-    tipoRetorno = g.tipoLLVM(tipoFuncao)
+    # se for inteiro
+    if tipoFuncao == "inteiro":
+        tipoRetorno = ll.IntType(32)
+    
+    # se for flutuante
+    elif tipoFuncao == "flutuante":
+        tipoRetorno = ll.FloatType()
+
+    # se for void
+    else:
+        tipoRetorno = ll.VoidType()
+
     parametros = []
 
     # try/except para o caso de quando a variavel nao possui tipo de retorno (e necessario pegar o nome em outro filho)
@@ -183,7 +207,17 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
                 if var[4] == nomeFuncao:
 
                     # pego o tipo dela e salvo nos parametros
-                    tipoVar = g.tipoLLVM(var[1])
+                    if var[1] == "inteiro":
+                        tipoVar = ll.IntType(32)
+                    
+                    # se for flutuante
+                    elif var[1] == "flutuante":
+                        tipoVar = ll.FloatType()
+
+                    # se for void
+                    else:
+                        tipoVar = ll.VoidType()
+
                     parametros.append(tipoVar)
     except:
 
@@ -193,8 +227,19 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
         # o escopo e a funcao atual
         escopo = nomeFuncao
 
-        # pego o retorno
-        tipoRetorno = g.tipoLLVM(tipoFuncao)
+        # se for inteiro
+        if tipoFuncao == "inteiro":
+            tipoRetorno = ll.IntType(32)
+        
+        # se for flutuante
+        elif tipoFuncao == "flutuante":
+            tipoRetorno = ll.FloatType()
+
+        # se for void
+        else:
+            tipoRetorno = ll.VoidType()
+
+
         parametros = []
 
         # para cada parametro da funcao
@@ -206,8 +251,18 @@ def function(no, listaFuncoes, listaVariaveis, modulo):
                 # caso a varaivel seja da funcao
                 if var[4] == nomeFuncao:
 
-                    # pego o tipo dela e salvo nos parametros
-                    tipoVar = g.tipoLLVM(var[1])
+                    # se for inteiro
+                    if var[1] == "inteiro":
+                        tipoVar = ll.IntType(32)
+                    
+                    # se for flutuante
+                    elif var[1] == "flutuante":
+                        tipoVar = ll.FloatType()
+
+                    # se for void
+                    else:
+                        tipoVar = ll.VoidType()
+
                     parametros.append(tipoVar)
 
     # tipo da funcao
@@ -316,7 +371,6 @@ def tree(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     if no.name == 'retorna':
         retorno = True
         retorna(no, builder, tipoFuncao, funcao)
-        return
 
     # caso seja uma funcao leia
     elif no.name == 'leia':
@@ -348,9 +402,10 @@ def tree(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
         chamadaFuncao(no, builder, listaFuncoes)
         return
 
-    # passo por todos os nos
-    for noFilho in no.children:
-        tree(noFilho, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao)
+    else:
+        # passo por todos os nos
+        for noFilho in no.children:
+            tree(noFilho, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao)
 
 # chamada de funcoes
 def chamadaFuncao(no, builder, listaFuncoes):
@@ -499,18 +554,9 @@ def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     else:
         condicoes = 1
 
-    # crio um bloco para cada condicao
-    # if condicoes == 2:
-    #     seTrue = funcao.append_basic_block('iftrue')
-    #     seFalse = funcao.append_basic_block('iffalse')
-    #     seEnd = funcao.append_basic_block('ifend')
-    # else:
-    #     seTrue = funcao.append_basic_block('iftrue')
-    #     seEnd = funcao.append_basic_block('ifend')
-
-    seTrue = funcao.append_basic_block('iftrue')
-    seFalse = funcao.append_basic_block('iffalse')
-    seEnd = funcao.append_basic_block('ifend')
+    seTrue = funcao.append_basic_block('if_true')
+    seFalse = funcao.append_basic_block('if_false')
+    seEnd = funcao.append_basic_block('if_end')
 
     comparacoes = []
 
@@ -617,6 +663,13 @@ def se(no, builder, tipoFuncao, listaFuncoes, listaVariaveis, funcao):
     # ultimo bloco
     builder.position_at_end(seEnd)
 
+def checarVariavel(variavel, escopo):
+    for var in variaveis[escopo]:
+        if variavel in var:
+            return var[variavel], True
+    
+    return None, False
+
 # funcao para pegar o valor da variavel
 def pegarVariavel(variavel):
     achado = False
@@ -624,27 +677,12 @@ def pegarVariavel(variavel):
     if escopo in variaveis:
         
         if any(variavel in var for var in variaveis[escopo]):
-            # variavelAchada = checarVariavel(variavel, variaveis, escopo)
-            for var in variaveis[escopo]:
-                if variavel in var:
-                    variavel = var[variavel]
-                    achado = True
-                    break
+            variavel, achado = checarVariavel(variavel, escopo)
 
         else:
-            # variavelAchada = checarVariavel(variavel, variaveis, 'global')
-            for var in variaveis['global']:
-                if variavel in var:
-                    variavel = var[variavel]
-                    achado = True
-                    break
+            variavel, achado = checarVariavel(variavel, 'global')
     else:
-        # variavelAchada = checarVariavel(variavel, variaveis, 'global')
-        for var in variaveis['global']:
-            if variavel in var:
-                variavel = var[variavel]
-                achado = True
-                break
+        variavel, achado = checarVariavel(variavel, 'global')
 
     if achado:
         return variavel
@@ -653,7 +691,7 @@ def pegarVariavel(variavel):
 
 # realiza o bloco final do programa
 def retorna(no, builder, tipoFuncao, funcao):
-    
+
     # caso seja a funcao principal
     # if funcao.name == 'main':
 
@@ -732,7 +770,6 @@ def retorna(no, builder, tipoFuncao, funcao):
 
     # se nao tiver mais de um parametro  
     else:
-
         # flag para numerico
         num = False
 
@@ -754,7 +791,18 @@ def retorna(no, builder, tipoFuncao, funcao):
         if num:
 
             # pego o valor da variavel
-            valor = ll.Constant(g.tipoLLVM(tipoFuncao), retorno)
+            if tipoFuncao == "inteiro":
+                tipoAux = ll.IntType(32)
+            
+            # se for flutuante
+            elif tipoFuncao == "flutuante":
+                tipoAux = ll.FloatType()
+
+            # se for void
+            else:
+                tipoAux = ll.VoidType()
+
+            valor = ll.Constant(tipoAux, retorno)
 
             # builda o valor
             builder.ret(valor)
@@ -1097,8 +1145,10 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
     idx = 0
 
     operacao = '+'
+    funcaoPaiInit = False
+    callPai = 0
+    haveMoreFunctions = False
 
-    print(esquerda, direita)
     # enquanto tiver 'operacoes'
     while idx < len(direita):
 
@@ -1139,6 +1189,13 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
             # caso seja funcao
             elif direita[idx] in variaveis:
 
+                if direita[idx] in listaFuncoes and funcaoPaiInit == False and direita[idx+1] in listaFuncoes:
+                    funcaoPaiInit = True
+                    haveMoreFunctions = True
+                    funcaoPai = funcoes[direita[idx]][0]
+                    numVarPai = listaFuncoes[direita[idx]][0][2]
+                    idx+=1
+
                 # variaveis auxiliares para a funcao
                 numVar = listaFuncoes[direita[idx]][0][2]
                 funcao = funcoes[direita[idx]][0]
@@ -1155,7 +1212,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         nomeParam = listaFuncoes[direita[idx]][0][3][aux]
                         tipoParam = listaVariaveis[nomeParam][0][1]
 
-                        print('nome: ', nomeParam)
                         # se for inteiro/flutuante
                         if tipoParam == 'inteiro':
                             valorParam = int(direita[nxtIdx])
@@ -1192,16 +1248,27 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 #     tipo = ll.FloatType()
                 
                 try:
-                    print(funcao, args)
                     expressaoT = builder.call(funcao, args)
+
+                    if callPai == 0:
+                        expressaoAux = expressaoT
+
+                    callPai += 1
+
+                    if callPai == 2 and funcaoPaiInit:
+                        argsPai = [expressaoAux, expressaoT]
+                        expressaoT = builder.call(funcaoPai, argsPai)
+                        
+                        callPai = 0
+                        funcaoPaiInit = False
+                
                 except:
                     pass
 
                 # incremento
-                idx += idx + numVar
+                idx = idx + numVar
             
             # elif pegarVariavel(direita[idx]) == None:
-            #     print('É VALOR', direita[idx])
             #     expressaoT = pegarVariavel(direita[idx])
 
             #     if 'i32' in str(tipo):
@@ -1216,7 +1283,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
             # caso não for variavel, e sim valor
             elif pegarVariavel(direita[idx]) != None:
-                print('É VALOR 2:', tipo, direita[idx])
 
                 # se for inteiro
                 if 'i32' in str(tipo) or 'f32' in str(tipo):
@@ -1229,7 +1295,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                             ePrimeiro = False
 
                             if idx == 0:
-                                print('É PRIMEIRO')
                                 ePrimeiro = True
 
                             if len(direita) > idx+3:
@@ -1238,7 +1303,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                             # variaveis auxiliriares
                             arrVar = direita[idx]
                             idxVar = direita[idx+2]
-                            print('OLHA AQUI: \nGAP: ', arrVar, ' | IDX: ', idxVar, ' | ', idx)
 
                             # pego o arranjo
                             arrVar = pegarVariavel(arrVar)
@@ -1295,11 +1359,9 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                                 expressaoT = pegarVariavel(direita[idx])
         # caso seja soma
         if operacao == '+':
-            print('SOMA')
-
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
-                
+
                 if len(esquerda) == 1 and len(direita) == 1:
                     builder.store(expressaoT, variavel)
                 
@@ -1311,18 +1373,21 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         if ePrimeiro:
                             # indice = builder.load(var)
 
-                            # print('expressaoT: ', expressaoT)
                             # valor = builder.gep(expressaoT, [indice])
                             # if '0x0' not in valid:
-                            print('PRIMEIROOOOOOOOOOOOOOOOOOOOOOOOOO')
                             builder.store(expressaoT, variavel)
                             ePrimeiro = False
 
                         else:
-                            
+
                             # if '0x0' not in valid:
-                            valor = builder.fadd(expressaoT, builder.load(variavel, align=4))
-                            builder.store(valor, variavel)
+                            validE = str(expressao).split(' ')[len(str(expressao).split(' '))-1]
+                            validT = str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1]
+
+                            if '0x0' not in validE or '0x0' not in validT:
+                                print('VALIDO')
+                                valor = builder.fadd(expressaoT, builder.load(variavel, align=4))
+                                builder.store(valor, variavel)
 
 
 
@@ -1338,47 +1403,35 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         
                         # expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
                         # builder.store(expressao, variavel)
-                        # print('aqui float: ', esquerda, direita)
                        
                         # indice = str(var).split('"')[2]
                         # # expressao = builder.load(var)
-                        # # print('e:', expressao)
                         # # variavel = builder.gep(variavelEsquerda, [expressao])
-                        # # print('v', variavelEsquerda)
                         # int_ty = ll.IntType(32)
 
                         # vEsquerda = pegarVariavel(direita[0])
-                        # print('a: ', vEsquerda)
 
                         # if direita[2] == indice:
-                        #     print('var')
                         #     indiceEsquerda = var
                         # else:    
                         #     indiceEsquerda = builder.load(pegarVariavel(direita[2]), align=4)
-                        # print('i: ', indiceEsquerda)
                         
                         # vEsquerda = builder.gep(vEsquerda, [indiceEsquerda])
-                        # print('a completo: ', vEsquerda)
 
                         # vDireita = pegarVariavel(direita[5])
-                        # print('b: ', vDireita)
 
                         # if direita[2] == direita[7]:
-                        #     print('var')
                         #     indiceDireita = indiceEsquerda
                         # elif direita[2] != direita[7] and direita[2] == indice:
                         #     indicedireita = var
                         # else:
                         #     indiceDireita = builder.load(pegarVariavel(direita[7]), align=4)
-                        # print('i: ', indiceDireita)
 
                         # vDireita = builder.gep(vDireita, [indiceDireita])
-                        # print('b completo: ', vDireita)
 
                         # operacao = direita[4]
                         
                         # auxAdd = builder.fadd(vEsquerda, vDireita, name='expressao', flags=())
-                        # print('operacao: ', builder.load(vEsquerda))
                         # # addResult = builder.store(auxAdd, variavel)
 
                         # if '[' in esquerda:
@@ -1386,7 +1439,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         #     # valueVariavel = builder.load(pegarVariavel(esquerda[2]), align=4)
 
                         #     # labelVariavel = builder.gep(auxVariavel, [valueVariavel])
-                        #     print('AQUI: ', variavel)
 
                         #     builder.store(builder.load(auxAdd), variavel)
 
@@ -1422,12 +1474,10 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                 #                 expressao = builder.fadd(builder.load(expressao), builder.load(expressaoT), name='expressao', flags=())
 
                 #             except:
-                #                 print('Erro ao somar')
                 #                 pass
 
             # caso ambos forem inteiros
             elif 'i32' in expressao.type.intrinsic_name and 'i32' in expressaoT.type.intrinsic_name:
-
                 if len(esquerda) == 1 and len(direita) == 1:
                     builder.store(expressaoT, variavel)
                 
@@ -1437,13 +1487,18 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                         
                         if '[' in direita:
                             pass
+                        elif haveMoreFunctions == True and funcaoPaiInit == False:
+
+                            expressao = pegarVariavel(esquerda[0])
+
+                            builder.store(expressaoT, expressao)
 
                     else:
 
                         if str(expressao).split(' ')[len(str(expressao).split(' '))-1] == 0 or str(expressaoT).split(' ')[len(str(expressaoT).split(' '))-1] == 0:
                             pass
+
                         else:
-                            print('olha aqui: ', expressao, ' || ', expressaoT, ' || ', variavel)
                             expressao = builder.add(expressao, expressaoT, name='expressao', flags=())
                             try:
                                 builder.store(expressao, variavel)
@@ -1452,7 +1507,6 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
 
             # caso tenha os dois tipos
             else:
-                
                 # se um for flutuante e outro inteiro
                 if 'i32' in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
                     valorAlt = float(valorT)
@@ -1495,21 +1549,54 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                                 expressao = builder.fadd(expressao, expressaoT, name='expressao', flags=())
                                 builder.store(expressao, variavel)
 
+                else:
+                    if len(esquerda) == 4:
+                        if esquerda[len(esquerda)-1] == ']':
+                            variavelArray = pegarVariavel(esquerda[0])
+                            vArray = builder.gep(variavelArray, [builder.load(var)])
+
+                            valorAtribuicaoLabel = str(expressaoT).split(' ')[1]
+
+                            try:
+                                valorAtribuicao = int(valorAtribuicaoLabel)
+                                labelValorAtribuicao = 'int'
+                            except:
+                                valorAtribuicao = float(valorAtribuicaoLabel)
+                                labelValorAtribuicao = 'float'
+
+                            if labelValorAtribuicao == 'float':
+                                expressaoT = ll.Constant(ll.FloatType(), valorAtribuicao)
+                            else:
+                                expressaoT = ll.Constant(ll.IntType(32), valorAtribuicao)
+                            
+                            try:
+                                builder.store(expressaoT, vArray)
+                            except:
+                                if labelValorAtribuicao == 'float':
+                                    valorAtribuicao = int(valorAtribuicaoLabel)
+
+                                    expressaoT = ll.Constant(ll.IntType(32), valorAtribuicao)
+                                    builder.store(expressaoT, vArray)
+
+                                else:
+                                    valorAtribuicao = float(valorAtribuicaoLabel)
+
+                                    expressaoT = ll.Constant(ll.FloatType(), valorAtribuicao)
+                                    builder.store(expressaoT, vArray)
+                    
         # caso seja subtracao
         if operacao == '-':
-            
             # caso ambos forem flutuantes
             if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
+                
                 expressao = builder.fsub(expressao, expressaoT, name='expressao', flags=())
 
             # caso ambos forem inteiros
             elif 'i32'  in expressao.type.intrinsic_name and  'i32' in expressaoT.type.intrinsic_name:
-                
                 if len(esquerda) == 1 and len(direita) == 1:
                     builder.store(expressaoT, variavel)
                 
                 else:
-                    print('olha aqui: ', expressao, ' || ', expressaoT, ' || ', variavel)
                     try:
                         expressao = builder.sub(expressao, expressaoT, name='expressao', flags=())
                         builder.store(expressao, variavel)
@@ -1531,58 +1618,22 @@ def atribuicao(no, builder, listaFuncoes, listaVariaveis):
                     expressao = ll.Constant(ll.FloatType(), valorAlt)
                     expressao = builder.fsub(expressao, expressaoT, name='expressao', flags=())
 
-        # caso seja multiplicacao
-        elif operacao == '*':
-
-            # caso ambos forem flutuantes
-            if 'i32' not in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
-                expressao = builder.fmul(expressao, expressaoT, name='expressao', flags=())
-
-            # caso ambos forem inteiros
-            elif 'i32' in expressao.type.intrinsic_name and 'i32' in expressaoT.type.intrinsic_name:
-                expressao = builder.mul(expressao, expressaoT, name='expressao', flags=())
-
-            # caso tenha os dois tipos
-            else:
-
-                # se um for flutuante e outro inteiro
-                if 'i32' not in expressao.type.intrinsic_name and 'i32' in expressaoT.type.intrinsic_name:
-                    valorAlt = float(valorT)
-                    expressaoT = ll.Constant(ll.FloatType(), valorAlt)
-                    expressao = builder.fmul(expressao, expressaoT, name='expressao', flags=())
-
-                # se um for inteiro e outro flutuante
-                elif 'i32' in expressao.type.intrinsic_name and 'i32' not in expressaoT.type.intrinsic_name:
-                    valorAlt = float(valorE)
-                    expressao = ll.Constant(ll.FloatType(), valorAlt)
-                    expressao = builder.fmul(expressao, expressaoT, name='expressao', flags=())
-        
         # caso nao seja nenhum dos casos acima
         else:
             
             # try/except pois em alguns casos direita[idx] nao existe
             try:
-                # soma
-                if direita[idx] == '+':
-                    operacao = '+'
-                
+
                 # subtracao
-                elif direita[idx] == '-':
+                if direita[idx] == '-':
                     operacao = '-'
 
-                # multiplicacao
-                elif direita[idx] == '*':
-                    operacao = '*'
+                # soma
+                elif direita[idx] == '+':
+                    operacao = '+'
 
             except:
                 pass
 
         # incremento
         idx+=1
-    
-    # try:
-    #     # salvo
-    #     builder.store(expressao, variavel)
-    # except:
-    #     # erro aqui **
-    #     pass

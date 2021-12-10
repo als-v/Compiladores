@@ -34,25 +34,6 @@ def mostrarErro(p):
     parser.errok()
     p[0] = father
 
-# verifica se a variavel nao foi declarada
-def erroVariavel(node, line, adicionar=True):
-    nos = buscarNos(node, [], 'ID')
-
-    # para cada um dos nos
-    for no in nos:
-
-        # caso esteja na lista de variaveis
-        if no.children[0].label in listaVariaveis:
-            if adicionar:
-                listaVariaveis[no.children[0].label][-1][-1].append((line, node))
-        
-        # caso nao esteja na lista de variaveis
-        else:
-
-            # caso nao seja chamada de funcao
-            if no.anchestors[-1].label != 'chamada_funcao':
-                message = ('ERROR', 'Erro: Variável “' + str(no.children[0].label)  + '” não declarada')
-                listaErros.append(message)
 
 def addFuncaoLista(no, line, p):
     # pego a label da funcao
@@ -97,6 +78,25 @@ def p_declaracao(p):
     p[0] = pai
     p[1].parent = pai
 
+# verifica se a variavel nao foi declarada
+def erroVariavel(node, line, adicionar=True):
+    nos = buscarNos(node, [], 'ID')
+
+    # para cada um dos nos
+    for no in nos:
+
+        # caso esteja na lista de variaveis
+        if no.children[0].label in listaVariaveis:
+            if adicionar:
+                listaVariaveis[no.children[0].label][-1][-1].append((line, node))
+        
+        # caso nao esteja na lista de variaveis
+        else:
+
+            # caso nao seja chamada de funcao
+            if no.anchestors[-1].label != 'chamada_funcao':
+                message = ('ERROR', 'Erro: Variável “' + str(no.children[0].label)  + '” não declarada')
+                listaErros.append(message)
 # encontrar os nos com uma label especifica de uma lista de nos
 def buscarNos(node, nos, label):
     for no in node.children:

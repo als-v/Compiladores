@@ -27,23 +27,6 @@ def auxArrays(pai):
     # retorna os valores
     return direita, esquerda
 
-# funcao que retorna o tipo da variavel
-def tipoLLVM(tipo):
-
-    # se for inteiro
-    if tipo == "inteiro":
-        default_type = ll.IntType(32)
-    
-    # se for flutuante
-    elif tipo == "flutuante":
-        default_type = ll.FloatType()
-
-    # se for void
-    else:
-        default_type = ll.VoidType()
-
-    return default_type
-
 def run(file):
     file = str(file)
 
