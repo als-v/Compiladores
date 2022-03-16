@@ -1,3 +1,5 @@
 conjunto_testes/
 log.txt
 lextab.py
+
+__pycache__/

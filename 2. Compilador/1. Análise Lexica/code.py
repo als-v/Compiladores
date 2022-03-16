@@ -1,195 +1,216 @@
+import logging
+import ply.lex as lex
+from ply.lex import TOKEN
 from sys import argv, exit
 
-import logging
+# configurações de log
 logging.basicConfig(
      level = logging.DEBUG,
      filename = "log.txt",
      filemode = "w",
      format = "%(filename)10s:%(lineno)4d:%(message)s"
 )
+
 log = logging.getLogger()
 
-import ply.lex as lex
-from ply.lex import TOKEN
-
+# lista dos tokens
 tokens = [
-    "ID",  # identificador
+    "ID",                       # identificador
+    
     # numerais
-    "NUM_NOTACAO_CIENTIFICA",  # ponto flutuante em notaçao científica
-    "NUM_PONTO_FLUTUANTE",  # ponto flutuate
-    "NUM_INTEIRO",  # inteiro
+    "NUM_NOTACAO_CIENTIFICA",   # ponto flutuante em notaçao científica
+    "NUM_PONTO_FLUTUANTE",      # ponto flutuante
+    "NUM_INTEIRO",              # inteiro
     # operadores binarios
-    "MAIS",  # +
-    "MENOS",  # -
-    "MULTIPLICACAO",  # *
-    "DIVISAO",  # /
-    "E_LOGICO",  # &&
-    "OU_LOGICO",  # ||
-    "DIFERENCA",  # <>
-    "MENOR_IGUAL",  # <=
-    "MAIOR_IGUAL",  # >=
-    "MENOR",  # <
-    "MAIOR",  # >
-    "IGUAL",  # =
+    "MAIS",                     # +
+    "MENOS",                    # -
+    "MULTIPLICACAO",            # *
+    "DIVISAO",                  # /
+    "E_LOGICO",                 # &&
+    "OU_LOGICO",                # ||
+    "DIFERENCA",                # <>
+    "MENOR_IGUAL",              # <=
+    "MAIOR_IGUAL",              # >=
+    "MENOR",                    # <
+    "MAIOR",                    # >
+    "IGUAL",                    # =
+    
     # operadores unarios
-    "NEGACAO",  # !
+    "NEGACAO",                  # !
+    
     # simbolos
-    "ABRE_PARENTESE",  # (
-    "FECHA_PARENTESE",  # )
-    "ABRE_COLCHETE",  # [
-    "FECHA_COLCHETE",  # ]
-    "VIRGULA",  # ,
-    "DOIS_PONTOS",  # :
-    "ATRIBUICAO",  # :=
+    "ABRE_PARENTESE",           # (
+    "FECHA_PARENTESE",          # )
+    "ABRE_COLCHETE",            # [
+    "FECHA_COLCHETE",           # ]
+    "VIRGULA",                  # ,
+    "DOIS_PONTOS",              # :
+    "ATRIBUICAO",               # :=
+
     # 'COMENTARIO', # {***}
 ]
 
+# lista das palavras reservadas
 reserved_words = {
-    "se": "SE",
-    "então": "ENTAO",
-    "senão": "SENAO",
-    "fim": "FIM",
-    "repita": "REPITA",
-    "flutuante": "FLUTUANTE",
-    "retorna": "RETORNA",
-    "até": "ATE",
-    "leia": "LEIA",
-    "escreva": "ESCREVA",
-    "inteiro": "INTEIRO",
+    "se":           "SE",
+    "então":        "ENTAO",
+    "senão":        "SENAO",
+    "fim":          "FIM",
+    "repita":       "REPITA",
+    "flutuante":    "FLUTUANTE",
+    "retorna":      "RETORNA",
+    "até":          "ATE",
+    "leia":         "LEIA",
+    "escreva":      "ESCREVA",
+    "inteiro":      "INTEIRO",
 }
 
+# uniao dos tokens com as palavras reservadas
 tokens = tokens + list(reserved_words.values())
 
-digito = r"([0-9])"
-letra = r"([a-zA-ZáÁãÃàÀéÉíÍóÓõÕ])"
-sinal = r"([\-\+]?)"
+## definição das expressões regulares complexas
+digito = r'([0-9])'
 
-""" 
-    id deve começar com uma letra
-"""
-id = (
-    r"(" + letra + r"(" + digito + r"+|_|" + letra + r")*)"
-)  # o mesmo que '((letra)(letra|_|([0-9]))*)'
+letra = r'([a-zA-ZáÁãÃàÀéÉíÍóÓõÕ])'
 
+sinal = r'([\-\+]?)'
+
+# id deve começar com uma letra
+id = r"(" + letra + r"(" + digito + r"+|_|" + letra + r")*)"
+#id = r'((letra)(letra|_|([0-9]))*)'
+
+inteiro = r"\d+"
 # inteiro = r"(" + sinal + digito + r"+)"
 # inteiro = r"(" + digito + r"+)"
-inteiro = r"\d+"
 
-flutuante = (
-    # r"(" + digito + r"+\." + digito + r"+?)"
-    # (([-\+]?)([0-9]+)\.([0-9]+))'
-    r'\d+[eE][-+]?\d+|(\.\d+|\d+\.\d*)([eE][-+]?\d+)?'
-    # r'[-+]?[0-9]+(\.([0-9]+)?)'
-    #r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
-    #r"(([-\+]?)([0-9]+)\.([0-9]+))"
-    )
+flutuante = r'\d+[eE][-+]?\d+|(\.\d+|\d+\.\d*)([eE][-+]?\d+)?'
+# flutuante = r'(' + digito + r'+\.' + digito + r'+?)'
+# flutuante = r'(([-\+]?)([0-9]+)\.([0-9]+))'
+# flutuante = r'[-+]?[0-9]+(\.([0-9]+)?)'
+# flutuante = r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
+# flutuante = r'(([-\+]?)([0-9]+)\.([0-9]+))'
 
-notacao_cientifica = (
-    r"(" + sinal + r"([1-9])\." + digito + r"+[eE]" + sinal + digito + r"+)"
-)  # o mesmo que '(([-\+]?)([1-9])\.([0-9])+[eE]([-\+]?)([0-9]+))'
+notacao_cientifica = r'(' + sinal + r'([1-9])\.' + digito + r'+[eE]' + sinal + digito + r'+)'
+# notacao_cientifica = r'(([-\+]?)([1-9])\.([0-9])+[eE]([-\+]?)([0-9]+))'
 
+comentario = r'(\{((.|\n)*?)\})'
+nova_linha = r'\n+'
  
-# Expressões Regulaes para tokens simples.
-# Símbolos.
-t_MAIS = r'\+'
-t_MENOS = r'-'
-t_MULTIPLICACAO = r'\*'
-t_DIVISAO = r'/'
-t_ABRE_PARENTESE = r'\('
+## definição das expressões regulares simples
+
+# simbolos
+t_MAIS =            r'\+'
+t_MENOS =           r'-'
+t_MULTIPLICACAO =   r'\*'
+t_DIVISAO =         r'/'
+t_ABRE_PARENTESE =  r'\('
 t_FECHA_PARENTESE = r'\)'
-t_ABRE_COLCHETE = r'\['
-t_FECHA_COLCHETE = r'\]'
-t_VIRGULA = r','
-t_ATRIBUICAO = r':='
-t_DOIS_PONTOS = r':'
+t_ABRE_COLCHETE =   r'\['
+t_FECHA_COLCHETE =  r'\]'
+t_VIRGULA =         r','
+t_ATRIBUICAO =      r':='
+t_DOIS_PONTOS =     r':'
 
-# Operadores Lógicos.
-t_E_LOGICO = r'&&'
-t_OU_LOGICO = r'\|\|'
-t_NEGACAO = r'!'
+# operadores logicos
+t_E_LOGICO =    r'&&'
+t_OU_LOGICO =   r'\|\|'
+t_NEGACAO =     r'!'
 
-# Operadores Relacionais.
-t_DIFERENCA = r'<>'
+# operadores relacionais
+t_DIFERENCA =   r'<>'
 t_MENOR_IGUAL = r'<='
 t_MAIOR_IGUAL = r'>='
-t_MENOR = r'<'
-t_MAIOR = r'>'
-t_IGUAL = r'='
+t_MENOR =       r'<'
+t_MAIOR =       r'>'
+t_IGUAL =       r'='
+
+t_ignore = " \t"
 
 @TOKEN(id)
 def t_ID(token):
-    token.type = reserved_words.get(
-        token.value, "ID"
-    )  # não é necessário fazer regras/regex para cada palavra reservada
-    # se o token não for uma palavra reservada automaticamente é um id
-    # As palavras reservadas têm precedências sobre os ids
+
+    # não é necessário fazer regras/regex para cada palavra reservada se o token não for uma palavra reservada automaticamente é um id as palavras reservadas têm precedências sobre os ids
+    token.type = reserved_words.get(token.value, 'ID')  
 
     return token
 
 @TOKEN(notacao_cientifica)
 def t_NUM_NOTACAO_CIENTIFICA(token):
+
     return token
 
 @TOKEN(flutuante)
 def t_NUM_PONTO_FLUTUANTE(token):
+
     return token
 
 @TOKEN(inteiro)
 def t_NUM_INTEIRO(token):
+
     return token
 
-t_ignore = " \t"
-
-# t_COMENTARIO = r'(\{((.|\n)*?)\})'
-# para poder contar as quebras de linha dentro dos comentarios
+@TOKEN(comentario)
 def t_COMENTARIO(token):
-    r"(\{((.|\n)*?)\})"
+    
+    # para poder contar as quebras de linha dentro dos comentarios
     token.lexer.lineno += token.value.count("\n")
-    # return token
+    
+    # não a necessidade de retornar o token
 
-def t_newline(token):
-    r"\n+"
+@TOKEN(nova_linha)
+def t_NEWLINE(token):
+    
+    # para pular as linhas referentes ao valor
     token.lexer.lineno += len(token.value)
 
-def define_column(input, lexpos):
-    begin_line = input.rfind("\n", 0, lexpos) + 1
-    return (lexpos - begin_line) + 1
+    # não a necessidade de retornar o token
 
+# tratamento de erros
 def t_error(token):
 
-    # file = token.lexer.filename
-    line = token.lineno
-    # column = define_column(token.lexer.backup_data, token.lexpos)
-    message = "Caracter ilegal '%s'" % token.value[0]
+    # print('Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'.format(token.value, token.lineno, token.lexpos))
+    print("Caracter inválido '{}'".format(token.value[0]))
 
-    # print(f"[{file}]:[{line},{column}]: {message}.") 
-    print(message)
-
+    # pulo o erro
     token.lexer.skip(1)
 
-    # token.lexer.has_error = Trueb
 def main():
-    # argv[1] = 'teste.tpp'
+    
+    # flag para mostrar saída detalhada 
+    detailed = False
+
+    # verificação da flag
+    if len(argv) == 3:
+        if argv[2] == 'd':
+            detailed = True
+    
+    # pegar o nome do arquivo
     aux = argv[1].split('.')
+
     if aux[-1] != 'tpp':
       raise IOError("Not a .tpp file!")
-    data = open(argv[1])
 
+    # abrir o arquivo
+    data = open(argv[1])
     source_file = data.read()
+
+    # construir a instancia do lexer
+    lexer = lex.lex(optimize=True,debug=True,debuglog=log)
     lexer.input(source_file)
 
-    # Tokenize
     while True:
-      tok = lexer.token()
-      if not tok: 
-        break      # No more input
-      print(tok)
-      # print(tok.type)
-      #print(tok.value)
 
-# Build the lexer.
-__file__ = "01-compiladores-analise-lexica-tpplex.ipynb"
-lexer = lex.lex(optimize=True,debug=True,debuglog=log)
+        # pegar os tokens
+        tok = lexer.token()
+
+        # No more input
+        if not tok: 
+            break
+
+        if detailed:
+            print(tok)
+        else:
+            print(tok.type)
 
 if __name__ == "__main__":
     main()
