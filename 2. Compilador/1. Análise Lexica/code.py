@@ -168,34 +168,49 @@ def t_NEWLINE(token):
 # tratamento de erros
 def t_error(token):
 
-    # print('Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'.format(token.value, token.lineno, token.lexpos))
-    print("Caracter inválido '{}'".format(token.value[0]))
+    # variaveis para controle
+    global error, detailed
+
+    error = True
+
+    if detailed:
+        print('Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'.format(token.value, token.lineno, token.lexpos))
+    
+    else:
+        print("Caracter inválido '{}'".format(token.value[0]))
 
     # pulo o erro
     token.lexer.skip(1)
 
 def main():
-    
-    # flag para mostrar saída detalhada 
-    detailed = False
 
+    # flag para mostrar se deu erro ou se a saída deve ser detalhada 
+    global error, detailed
+
+    error, detailed = False, False
+    
+    # pegar o nome do arquivo
+    try:
+        aux = argv[1].split('.')
+    except:
+        print('Arquivo inválido!')
+        return
+
+    if aux[-1] != 'tpp':
+        print('O arquivo selecionado não é tem a extensao .tpp!')
+        return
+    
     # verificação da flag
     if len(argv) == 3:
         if argv[2] == 'd':
             detailed = True
-    
-    # pegar o nome do arquivo
-    aux = argv[1].split('.')
-
-    if aux[-1] != 'tpp':
-      raise IOError("Not a .tpp file!")
 
     # abrir o arquivo
     data = open(argv[1])
     source_file = data.read()
 
     # construir a instancia do lexer
-    lexer = lex.lex(optimize=True,debug=True,debuglog=log)
+    lexer = lex.lex(optimize=True, debug=True, debuglog=log)
     lexer.input(source_file)
 
     while True:
