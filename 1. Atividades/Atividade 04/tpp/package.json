@@ -1,0 +1,25 @@
+{
+    "name": "tpp",
+    "displayName": "TPP",
+    "description": "TPP Programming Language",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.61.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "tpp",
+            "aliases": ["TPP Programming Language", "tpp"],
+            "extensions": [".tpp"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "tpp",
+            "scopeName": "source.tpp",
+            "path": "./syntaxes/tpp.tmLanguage.json"
+        }]
+    }
+}

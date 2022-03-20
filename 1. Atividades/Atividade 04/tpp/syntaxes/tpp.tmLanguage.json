@@ -1,0 +1,75 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "TPP Programming Language",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#variables"
+		},
+		{
+			"include": "#constants"
+		},
+		{
+			"include": "#functions"
+		},
+		{
+			"include": "#comments"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.tpp",
+				"match": "\\b(se|então|senão|fim|repita|retorna|até|leia|escreva)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.tpp",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.tpp",
+					"match": "\\\\."
+				}
+			]
+		},
+		"variables": {
+			"patterns": [{
+				"name": "variable.language.tpp",
+				"match": "\\b(inteiro|flutuante)\\b"
+			}]
+		},
+		"constants": {
+			"patterns": [
+				{
+					"name": "constant.numeric.tpp",
+					"match": "[0-9]"
+				},
+				{
+					"name": "constant.numeric.float.tpp",
+					"match": "[0-9]+|\\.|[0-9]"
+				}
+			]
+		},
+		"functions": {
+			"patterns": [{
+				"name": "support.function.builtin.tpp",
+				"match": "\\b(\n leia|escreva|retorna)\\b\n"
+			}]
+		},
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.double-dash.tpp",
+				"begin": "{",
+				"end": "}"
+			}]
+		}
+	},
+	"scopeName": "source.tpp"
+}
