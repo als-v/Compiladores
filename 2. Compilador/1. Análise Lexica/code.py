@@ -78,6 +78,7 @@ sinal = r'([\-\+]?)'
 # id deve começar com uma letra
 id = r"(" + letra + r"(" + digito + r"+|_|" + letra + r")*)"
 #id = r'((letra)(letra|_|([0-9]))*)'
+#id = r'(([a-zA-ZáÁãÃàÀéÉíÍóÓõÕ])(([0-9])+|_|([a-zA-ZáÁãÃàÀéÉíÍóÓõÕ]))*)'
 
 inteiro = r"\d+"
 # inteiro = r"(" + sinal + digito + r"+)"
@@ -88,7 +89,6 @@ flutuante = r'\d+[eE][-+]?\d+|(\.\d+|\d+\.\d*)([eE][-+]?\d+)?'
 # flutuante = r'(([-\+]?)([0-9]+)\.([0-9]+))'
 # flutuante = r'[-+]?[0-9]+(\.([0-9]+)?)'
 # flutuante = r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'
-# flutuante = r'(([-\+]?)([0-9]+)\.([0-9]+))'
 
 notacao_cientifica = r'(' + sinal + r'([1-9])\.' + digito + r'+[eE]' + sinal + digito + r'+)'
 # notacao_cientifica = r'(([-\+]?)([1-9])\.([0-9])+[eE]([-\+]?)([0-9]+))'
@@ -169,15 +169,21 @@ def t_NEWLINE(token):
 def t_error(token):
 
     # variaveis para controle
-    global error, detailed
+    global error, detailed, arq
 
     error = True
 
     if detailed:
-        print('Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'.format(token.value, token.lineno, token.lexpos))
+        print(
+            'Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'
+            .format(token.value, token.lineno, token.lexpos)
+        )
+
+        arq.write('Foi encontrado um caracter inválido: "{}", na linha: {} e na coluna {}'.format(token.value, token.lineno, token.lexpos))
     
     else:
         print("Caracter inválido '{}'".format(token.value[0]))
+        arq.write("Caracter inválido '{}'".format(token.value[0]))
 
     # pulo o erro
     token.lexer.skip(1)
@@ -212,6 +218,9 @@ def main():
     # construir a instancia do lexer
     lexer = lex.lex(optimize=True, debug=True, debuglog=log)
     lexer.input(source_file)
+    
+    global arq
+    arq = open('saida.txt', 'w')
 
     while True:
 
@@ -224,8 +233,12 @@ def main():
 
         if detailed:
             print(tok)
+            arq.write(str(tok) + '\n')
         else:
             print(tok.type)
+            arq.write(str(tok.type) + '\n')
+
+    arq.close()
 
 if __name__ == "__main__":
     main()
