@@ -191,7 +191,7 @@ def t_error(token):
 def main():
 
     # flag para mostrar se deu erro ou se a saída deve ser detalhada 
-    global error, detailed
+    global error, detailed, arq
 
     error, detailed = False, False
     
@@ -219,7 +219,6 @@ def main():
     lexer = lex.lex(optimize=True, debug=True, debuglog=log)
     lexer.input(source_file)
     
-    global arq
     arq = open('saida.txt', 'w')
 
     while True:
