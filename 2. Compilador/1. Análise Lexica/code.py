@@ -158,8 +158,8 @@ def t_COMENTARIO(token):
     # não a necessidade de retornar o token
 
 @TOKEN(nova_linha)
-def t_NEWLINE(token):
-    
+def t_newline(token):
+
     # para pular as linhas referentes ao valor
     token.lexer.lineno += len(token.value)
 
@@ -190,7 +190,7 @@ def t_error(token):
 
 def main():
 
-    # flag para mostrar se deu erro ou se a saída deve ser detalhada 
+    # flag para mostrar se deu erro ou se a saída deve ser detalhada
     global error, detailed, arq
 
     error, detailed = False, False
@@ -227,7 +227,7 @@ def main():
         tok = lexer.token()
 
         # No more input
-        if not tok: 
+        if not tok:
             break
 
         if detailed:
