@@ -203,7 +203,7 @@ def main():
         return
 
     if aux[-1] != 'tpp':
-        print('O arquivo selecionado não é tem a extensao .tpp!')
+        print('O arquivo selecionado não tem a extensao .tpp!')
         return
     
     # verificação da flag
