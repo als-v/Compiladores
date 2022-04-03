@@ -10,7 +10,7 @@ inteiro busca(inteiro: e)
 	i := 0
 
 	repita 
-		se A[i] = e
+		se A[i] > e
 			retorno := 1
 		fim		
 		i := i + 1
