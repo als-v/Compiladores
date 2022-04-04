@@ -7,6 +7,8 @@ from anytree.exporter import DotExporter, UniqueDotExporter
  
 # pegar os tokens da analise lexica
 from lex import tokens
+import subprocess
+import lex
 
 logging.basicConfig(
     level = logging.DEBUG,
@@ -16,6 +18,9 @@ logging.basicConfig(
 )
 
 log = logging.getLogger()
+
+def runLex():
+    subprocess.run(['python3', 'lex.py', 'code.tpp', 'd'])
 
 def mostrarErro(p):
 
@@ -98,6 +103,15 @@ def p_declaracao_variaveis(p):
     p[2] = filho
 
     p[3].parent = pai
+
+def p_declaracao_variaveis_error(p):
+    """declaracao_variaveis : error DOIS_PONTOS lista_variaveis
+                                | tipo error lista_variaveis
+                                | tipo DOIS_PONTOS error
+    """
+
+    print('\nErro na declaração de variáveis.')
+    mostrarErro(p)
 
 #   (inicializacao_variaveis)
 #              |
@@ -414,6 +428,15 @@ def p_atribuicao(p):
     p[2] = filho2
 
     p[3].parent = pai
+
+def p_atribuicao_error(p):
+    """atribuicao : error ATRIBUICAO expressao
+                    | var error expressao
+                    | var ATRIBUICAO error
+    """
+
+    print('\nErro na atribuição (atribuicao ou expressao).')
+    mostrarErro(p)
 
 def p_leia(p):
     """leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE"""
@@ -749,7 +772,7 @@ def p_vazio(p):
 
 def p_error(p):
     if p and detailedLogs:
-            print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str(p.lexpos), str(p.value)))
+        print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str(p.lexpos), str(p.value)))
 
 def main():
 
@@ -775,6 +798,8 @@ def main():
         detailedLogs = True
     if 'st' in argv:
         showTree = True
+
+    runLex()
 
     # abrir o arquivo
     data = open(argv[1])

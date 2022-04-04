@@ -193,7 +193,7 @@ def main():
     # flag para mostrar se deu erro ou se a saída deve ser detalhada
     global error, detailed, arq
 
-    error, detailed = False, False
+    error, showLog, detailed = False, False, False
     
     # pegar o nome do arquivo
     try:
@@ -210,6 +210,9 @@ def main():
     if len(argv) == 3:
         if argv[2] == 'd':
             detailed = True
+
+    if 'sl' in argv:
+        showLog = True
 
     # abrir o arquivo
     data = open(argv[1])
@@ -230,11 +233,15 @@ def main():
             break
 
         if detailed:
-            print(tok)
             arq.write(str(tok) + '\n')
+
+            if showLog:
+                print(tok)
         else:
-            print(tok.type)
             arq.write(str(tok.type) + '\n')
+
+            if showLog:
+                print(tok.type)
 
     arq.close()
 

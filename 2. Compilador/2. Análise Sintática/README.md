@@ -8,7 +8,7 @@
 - logging: Este módulo define funções e classes que implementam um sistema de logs flexíveis.
 
 ## Para instalar as dependencias:
-```pip install -f requirements.txt ```
+```pip install -r requirements.txt ```
 
 ## Para rodar deve-se executar o comando:
 ```python3 code.py [arquivo.tpp] [d] [st] ```
