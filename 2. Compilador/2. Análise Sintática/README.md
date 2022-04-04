@@ -11,7 +11,7 @@
 ```pip install -f requirements.txt ```
 
 ## Para rodar deve-se executar o comando:
-```python3 code.py [arquivo.tpp] [d] [showTree] ```
+```python3 code.py [arquivo.tpp] [d] [st] ```
 
 Onde, o arquivo.tpp é o arquivo para a análise que deve ser passado obrigatoriamente, e os parâmetros opcionais:
 - 'd' é um parâmetro opcional que indica se a saída deve ser detalhada ou não.
