@@ -138,6 +138,12 @@ def p_lista_variaveis(p):
     else:
        p[1].parent = pai
 
+# def p_lista_variaveis_error(p):
+#     """lista_variaveis : error """
+
+#     print('\nErro na declaração da lista de variáveis.')
+#     mostrarErro(p)
+
 def p_var(p):
     """var : ID
             | ID indice
@@ -772,14 +778,16 @@ def p_vazio(p):
 
 def p_error(p):
     if p and detailedLogs:
-        print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str(p.lexpos), str(p.value)))
+        line_start = source_file.rfind('\n', 0, p.lexpos) + 1
+
+        print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
 
 def main():
 
-    global detailedLogs, root
+    global detailedLogs, root, source_file
 
     error, detailedLogs, showTree = False, False, False
-    root = None
+    root, source_file = None, None
 
     # pegar nome do arquivo
     try:

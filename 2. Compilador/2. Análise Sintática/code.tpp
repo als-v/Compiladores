@@ -1,11 +1,8 @@
-inteiro: a, b, inteiro: c, d
+inteiro: a
 inteiro: b
-// inteiro: c[]
-// flutuante: d[10][]
-// flutuante: e[1024][
+inteiro: c[], c[]
 
-principal(12av1)
 inteiro principal()
     leia(a)
-    escreva()
+    escreva(b)
 fim
