@@ -1,10 +1,12 @@
-inteiro principal(inteiro: a)
-fim
+{    inteiro principal2()
+        principal()
+    fim
 
-inteiro batata(flutuante: b, flutuante: c)
-    inteiro:a
+    inteiro principal()
+        torre_eiffel()
+    fim}
+inteiro: c
+inteiro principal(inteiro: n, inteiro: b)
+inteiro: d
 fim
-
-torre_eiffel(inteiro: a)
-    inteiro:b
-fim
+inteiro: e

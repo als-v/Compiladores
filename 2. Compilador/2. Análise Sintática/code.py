@@ -19,8 +19,8 @@ logging.basicConfig(
 
 log = logging.getLogger()
 
-def runLex():
-    subprocess.run(['python3', 'lex.py', 'code.tpp', 'd'])
+def runLex(file):
+    subprocess.run(['python3', 'lex.py', file, 'd'])
 
 def mostrarErro(p):
 
@@ -807,7 +807,7 @@ def main():
     if 'st' in argv:
         showTree = True
 
-    runLex()
+    runLex(argv[1])
 
     # abrir o arquivo
     data = open(argv[1])
