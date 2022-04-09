@@ -1,48 +1,32 @@
-import logging
-import ply.yacc as yacc
-from mytree import MyNode
 from sys import argv, exit
-from anytree import RenderTree, AsciiStyle
-from anytree.exporter import DotExporter, UniqueDotExporter
- 
-# pegar os tokens da analise lexica
-from lex import tokens
-import subprocess
-import lex
+
+import logging
 
 logging.basicConfig(
-    level = logging.DEBUG,
-    filename = "log-parser.txt",
-    filemode = "w",
-    format = "%(filename)10s:%(lineno)4d:%(message)s"
+     level = logging.DEBUG,
+     filename = "log-parser.txt",
+     filemode = "w",
+     format = "%(filename)10s:%(lineno)4d:%(message)s"
 )
-
 log = logging.getLogger()
 
-def mostrarErro(p):
 
-    if detailedLogs:
-        print('\nErro:')
-        for i in range(len(p)):
-            print("p[{}]:{}".format(i, p[i]))
-        print(end='\n')
+import ply.yacc as yacc
+ 
+# Get the token map from the lexer.  This is required.
+from tpplex import tokens,log
 
-    try:
-        error_line = p.lineno(2)
-    except:
-        error_line = p.lineno(1)
+from mytree import MyNode
+from anytree.exporter import DotExporter, UniqueDotExporter
+from anytree import RenderTree, AsciiStyle
 
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        'Syntax error parsing index rule at line {}'.format(error_line))
-    parser.errok()
-    p[0] = father
-
+# Sub-árvore.
 #       (programa)
 #           |
 #   (lista_declaracoes)
 #     /     |      \
 #   ...    ...     ...
+
 def p_programa(p):
     """programa : lista_declaracoes"""
 
@@ -54,9 +38,11 @@ def p_programa(p):
     p[0] = programa
     p[1].parent = programa
 
-#       (lista_declaracoes)                          (lista_declaracoes)
-#          /           \                                      |
-# (lista_declaracoes)  (declaracao)                     (declaracao)
+#    (lista_declaracoes)                          (lista_declaracoes)
+#          /           \                                    |
+# (lista_declaracoes)  (declaracao)                    (declaracao)
+
+
 def p_lista_declaracoes(p):
     """lista_declaracoes : lista_declaracoes declaracao
                         | declaracao
@@ -68,11 +54,14 @@ def p_lista_declaracoes(p):
     if len(p) > 2:
         p[2].parent = pai
 
+# Sub-árvore.
 #      (declaracao)
 #           |
-#  (declaracao_variaveis |
-#   inicializacao_variaveis |
+#  (declaracao_variaveis ou
+#   inicializacao_variaveis ou
 #   declaracao_funcao)
+
+
 def p_declaracao(p):
     """declaracao : declaracao_variaveis
                 | inicializacao_variaveis
@@ -82,11 +71,14 @@ def p_declaracao(p):
     p[0] = pai
     p[1].parent = pai
 
+# Sub-árvore.
 #      (declaracao_variaveis)
 #      / p[1]    |           \
 # (tipo)    (DOIS_PONTOS)    (lista_variaveis)
 #                |
 #               (:)
+
+
 def p_declaracao_variaveis(p):
     """declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis"""
 
@@ -101,24 +93,20 @@ def p_declaracao_variaveis(p):
 
     p[3].parent = pai
 
-def p_declaracao_variaveis_error(p):
-    """declaracao_variaveis : error DOIS_PONTOS lista_variaveis
-                                | tipo error lista_variaveis
-                                | tipo DOIS_PONTOS error
-    """
-
-    print('\nErro na declaração de variáveis.')
-    mostrarErro(p)
-
+# Sub-árvore.
 #   (inicializacao_variaveis)
 #              |
 #         (atribuicao)
+
+
 def p_inicializacao_variaveis(p):
     """inicializacao_variaveis : atribuicao"""
 
-    pai = MyNode(name='inicializacao_variaveis', type='INICIALIZACAO_VARIAVEIS')
+    pai = MyNode(name='inicializacao_variaveis',
+                 type='INICIALIZACAO_VARIAVEIS')
     p[0] = pai
     p[1].parent = pai
+
 
 def p_lista_variaveis(p):
     """lista_variaveis : lista_variaveis VIRGULA var
@@ -126,7 +114,6 @@ def p_lista_variaveis(p):
     """
     pai = MyNode(name='lista_variaveis', type='LISTA_VARIAVEIS')
     p[0] = pai
-
     if len(p) > 2:
         p[1].parent = pai
         filho = MyNode(name='virgula', type='VIRGULA', parent=pai)
@@ -135,11 +122,6 @@ def p_lista_variaveis(p):
     else:
        p[1].parent = pai
 
-# def p_lista_variaveis_error(p):
-#     """lista_variaveis : error """
-
-#     print('\nErro na declaração da lista de variáveis.')
-#     mostrarErro(p)
 
 def p_var(p):
     """var : ID
@@ -151,9 +133,9 @@ def p_var(p):
     filho = MyNode(name='ID', type='ID', parent=pai)
     filho_id = MyNode(name=p[1], type='ID', parent=filho)
     p[1] = filho
-
     if len(p) > 2:
         p[2].parent = pai
+
 
 def p_indice(p):
     """indice : indice ABRE_COLCHETE expressao FECHA_COLCHETE
@@ -161,7 +143,6 @@ def p_indice(p):
     """
     pai = MyNode(name='indice', type='INDICE')
     p[0] = pai
-
     if len(p) == 5:
         p[1].parent = pai   # indice
 
@@ -185,15 +166,34 @@ def p_indice(p):
         filho_sym3 = MyNode(name=p[3], type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
+
 def p_indice_error(p):
-    """indice : error ABRE_COLCHETE expressao FECHA_COLCHETE
-                | ABRE_COLCHETE error FECHA_COLCHETE
+    """indice : ABRE_COLCHETE error FECHA_COLCHETE
                 | indice ABRE_COLCHETE error FECHA_COLCHETE
     """
 
-    print('\nErro na definicao do indice (expressao ou indice).')
-    mostrarErro(p)
+    print("Erro na definicao do indice. Expressao ou indice.")
 
+    print("Erro:p[0]:{p0}, p[1]:{p1}, p[2]:{p2}, p[3]:{p3}".format(
+        p0=p[0], p1=p[1], p2=p[2], p3=p[3]))
+    error_line = p.lineno(2)
+    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
+    logging.error(
+        "Syntax error parsing index rule at line {}".format(error_line))
+    parser.errok()
+    p[0] = father
+    # if len(p) == 4:
+    #     p[1] = new_node('ABRECOLCHETES', father)
+    #     p[2].parent = father
+    #     p[3] = new_node('FECHACOLCHETES', father)
+    # else:
+    #     p[1].parent = father
+    #     p[2] = new_node('ABRECOLCHETES', father)
+    #     p[3].parent = father
+    #     p[4] = new_node('FECHACOLCHETES', father)
+
+
+# Sub-árvore:
 #    (tipo)
 #      |
 #  (FLUTUANTE)
@@ -204,6 +204,7 @@ def p_tipo(p):
 
     pai = MyNode(name='tipo', type='TIPO')
     p[0] = pai
+    # p[1] = MyNode(name=p[1], type=p[1].upper(), parent=pai)
 
     if p[1] == "inteiro":
         filho1 = MyNode(name='INTEIRO', type='INTEIRO', parent=pai)
@@ -212,6 +213,7 @@ def p_tipo(p):
     else:
         filho1 = MyNode(name='FLUTUANTE', type='FLUTUANTE', parent=pai)
         filho_sym = MyNode(name=p[1], type=p[1].upper(), parent=filho1)
+
 
 def p_declaracao_funcao(p):
     """declaracao_funcao : tipo cabecalho 
@@ -224,11 +226,6 @@ def p_declaracao_funcao(p):
     if len(p) == 3:
         p[2].parent = pai
 
-def p_declaracao_funcao_error(p):
-    '''declaracao_funcao :  error '''
-
-    print('\nErro ao definir a função.')
-    mostrarErro(p)
 
 def p_cabecalho(p):
     """cabecalho : ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM"""
@@ -256,13 +253,12 @@ def p_cabecalho(p):
     filho_id = MyNode(name='fim', type='FIM', parent=filho6)
     p[6] = filho6
 
+
 def p_cabecalho_error(p):
     """cabecalho : ID ABRE_PARENTESE error FECHA_PARENTESE corpo FIM
                 | ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE error FIM
                 | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
     """
-    print('\nErro na definicao do cabecalho (lista de parametros, corpo ou id).')
-    mostrarErro(p)
 
 def p_lista_parametros(p):
     """lista_parametros : lista_parametros VIRGULA parametro
@@ -279,6 +275,7 @@ def p_lista_parametros(p):
         filho_sym2 = MyNode(name=',', type='SIMBOLO', parent=filho2)
         p[2] = filho2
         p[3].parent = pai
+
 
 def p_parametro(p):
     """parametro : tipo DOIS_PONTOS ID
@@ -305,6 +302,7 @@ def p_parametro(p):
         filho_sym3 = MyNode(name=']', type='SIMBOLO', parent=filho3)
         p[3] = filho3
 
+
 def p_parametro_error(p):
     """parametro : tipo error ID
                 | error ID
@@ -312,8 +310,6 @@ def p_parametro_error(p):
                 | parametro ABRE_COLCHETE error
     """
 
-    print('\nErro na definicao do parametro (tipo ou parametro).')
-    mostrarErro(p)
 
 def p_corpo(p):
     """corpo : corpo acao
@@ -326,6 +322,7 @@ def p_corpo(p):
 
     if len(p) > 2:
         p[2].parent = pai
+
 
 def p_acao(p):
     """acao : expressao
@@ -340,11 +337,16 @@ def p_acao(p):
     p[0] = pai
     p[1].parent = pai
 
+
+
+# Sub-árvore:
 #       ________ (se) ________________________________
 #      /    /          \      \         \      \      \
 # (SE) (expressao)  (ENTAO)  (corpo) (SENAO) (corpo) (FIM)
 #  |       |           |
 # (se)   (...)      (então) ....
+
+
 def p_se(p):
     """se : SE expressao ENTAO corpo FIM
           | SE expressao ENTAO corpo SENAO corpo FIM
@@ -380,6 +382,7 @@ def p_se(p):
         filho_fim = MyNode(name=p[5], type='FIM', parent=filho5)
         p[5] = filho5
 
+
 def p_se_error(p):
     """se : error expressao ENTAO corpo FIM
         | SE expressao error corpo FIM
@@ -389,8 +392,6 @@ def p_se_error(p):
         | SE expressao ENTAO corpo SENAO corpo
     """
 
-    print('\nErro de definicao SE (expressao ou corpo).')
-    mostrarErro(p)
 
 def p_repita(p):
     """repita : REPITA corpo ATE expressao"""
@@ -410,13 +411,11 @@ def p_repita(p):
 
     p[4].parent = pai   # expressao.
 
+
 def p_repita_error(p):
     """repita : error corpo ATE expressao
             | REPITA corpo error expressao
     """
-
-    print('\nErro de definicao REPITA (expressao ou corpo).')
-    mostrarErro(p)
 
 def p_atribuicao(p):
     """atribuicao : var ATRIBUICAO expressao"""
@@ -432,14 +431,6 @@ def p_atribuicao(p):
 
     p[3].parent = pai
 
-def p_atribuicao_error(p):
-    """atribuicao : error ATRIBUICAO expressao
-                    | var error expressao
-                    | var ATRIBUICAO error
-    """
-
-    print('\nErro na atribuição (atribuicao ou expressao).')
-    mostrarErro(p)
 
 def p_leia(p):
     """leia : LEIA ABRE_PARENTESE var FECHA_PARENTESE"""
@@ -461,11 +452,11 @@ def p_leia(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
-def p_leia_error(p):
-    """leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE"""
 
-    print('\nErro de definicao LEIA (var).')
-    mostrarErro(p)
+def p_leia_error(p):
+    """leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE
+    """
+
 
 def p_escreva(p):
     """escreva : ESCREVA ABRE_PARENTESE expressao FECHA_PARENTESE"""
@@ -487,6 +478,7 @@ def p_escreva(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
+
 def p_retorna(p):
     """retorna : RETORNA ABRE_PARENTESE expressao FECHA_PARENTESE"""
 
@@ -507,6 +499,7 @@ def p_retorna(p):
     filho_sym4 = MyNode(name=')', type='SIMBOLO', parent=filho4)
     p[4] = filho4
 
+
 def p_expressao(p):
     """expressao : expressao_logica
                     | atribuicao
@@ -514,6 +507,7 @@ def p_expressao(p):
     pai = MyNode(name='expressao', type='EXPRESSAO')
     p[0] = pai
     p[1].parent = pai
+
 
 def p_expressao_logica(p):
     """expressao_logica : expressao_simples
@@ -526,6 +520,7 @@ def p_expressao_logica(p):
     if len(p) > 2:
         p[2].parent = pai
         p[3].parent = pai
+
 
 def p_expressao_simples(p):
     """expressao_simples : expressao_aditiva
@@ -540,6 +535,7 @@ def p_expressao_simples(p):
         p[2].parent = pai
         p[3].parent = pai
 
+
 def p_expressao_aditiva(p):
     """expressao_aditiva : expressao_multiplicativa
                         | expressao_aditiva operador_soma expressao_multiplicativa
@@ -552,6 +548,7 @@ def p_expressao_aditiva(p):
     if len(p) > 2:
         p[2].parent = pai
         p[3].parent = pai
+
 
 def p_expressao_multiplicativa(p):
     """expressao_multiplicativa : expressao_unaria
@@ -566,6 +563,7 @@ def p_expressao_multiplicativa(p):
     if len(p) > 2:
         p[2].parent = pai
         p[3].parent = pai
+
 
 def p_expressao_unaria(p):
     """expressao_unaria : fator
@@ -587,11 +585,12 @@ def p_expressao_unaria(p):
     if len(p) > 2:
         p[2].parent = pai
 
+
 def p_operador_relacional(p):
     """operador_relacional : MENOR
                             | MAIOR
                             | IGUAL
-                            | DIFERENCA 
+                            | DIFERENTE 
                             | MENOR_IGUAL
                             | MAIOR_IGUAL
     """
@@ -608,7 +607,7 @@ def p_operador_relacional(p):
         filho = MyNode(name='IGUAL', type='IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     elif p[1] == "<>":
-        filho = MyNode(name='DIFERENCA', type='DIFERENCA', parent=pai)
+        filho = MyNode(name='DIFERENTE', type='DIFERENTE', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     elif p[1] == "<=":
         filho = MyNode(name='MENOR_IGUAL', type='MENOR_IGUAL', parent=pai)
@@ -617,9 +616,10 @@ def p_operador_relacional(p):
         filho = MyNode(name='MAIOR_IGUAL', type='MAIOR_IGUAL', parent=pai)
         filho_sym = MyNode(name=p[1], type='SIMBOLO', parent=filho)
     else:
-        print('\nErro operador relacional')
+        print('Erro operador relacional')
 
     p[1] = filho
+
 
 def p_operador_soma(p):
     """operador_soma : MAIS
@@ -636,44 +636,48 @@ def p_operador_soma(p):
        p[0] = MyNode(name='operador_soma',
                      type='OPERADOR_SOMA', children=[menos])
 
+
 def p_operador_logico(p):
-    """operador_logico : E_LOGICO
-                    | OU_LOGICO
+    """operador_logico : E
+                    | OU
     """
     if p[1] == "&&":
-        filho = MyNode(name='E_LOGICO', type='E_LOGICO')
+        filho = MyNode(name='E', type='E')
         filho_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_logico',
                       type='OPERADOR_LOGICO', children=[filho])
     else:
-        filho = MyNode(name='OU_LOGICO', type='OU_LOGICO')
+        filho = MyNode(name='OU', type='OU')
         filho_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_logico',
                       type='OPERADOR_SOMA', children=[filho])
 
+
 def p_operador_negacao(p):
-    """operador_negacao : NEGACAO"""
+    """operador_negacao : NAO"""
 
     if p[1] == "!":
-        filho = MyNode(name='NEGACAO', type='NEGACAO')
+        filho = MyNode(name='NAO', type='NAO')
         negacao_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_negacao',
                       type='OPERADOR_NEGACAO', children=[filho])
 
+
 def p_operador_multiplicacao(p):
-    """operador_multiplicacao : MULTIPLICACAO
-                            | DIVISAO
+    """operador_multiplicacao : VEZES
+                            | DIVIDE
         """
     if p[1] == "*":
-        filho = MyNode(name='MULTIPLICACAO', type='MULTIPLICACAO')
+        filho = MyNode(name='VEZES', type='VEZES')
         vezes_lexema = MyNode(name=p[1], type='SIMBOLO', parent=filho)
         p[0] = MyNode(name='operador_multiplicacao',
                       type='OPERADOR_MULTIPLICACAO', children=[filho])
     else:
-       divide = MyNode(name='DIVISAO', type='DIVISAO')
+       divide = MyNode(name='DIVIDE', type='DIVIDE')
        divide_lexema = MyNode(name=p[1], type='SIMBOLO', parent=divide)
        p[0] = MyNode(name='operador_multiplicacao',
                      type='OPERADOR_MULTIPLICACAO', children=[divide])
+
 
 def p_fator(p):
     """fator : ABRE_PARENTESE expressao FECHA_PARENTESE
@@ -696,11 +700,10 @@ def p_fator(p):
     else:
         p[1].parent = pai
 
-def p_fator_error(p):
-    """fator : ABRE_PARENTESE error FECHA_PARENTESE """
 
-    print('\nErro de definicao do fator.')
-    mostrarErro(p)
+def p_fator_error(p):
+    """fator : ABRE_PARENTESE error FECHA_PARENTESE
+        """
 
 def p_numero(p):
     """numero : NUM_INTEIRO
@@ -726,6 +729,7 @@ def p_numero(p):
         aux_val = MyNode(name=p[1], type='VALOR', parent=aux)
         p[1] = aux
 
+
 def p_chamada_funcao(p):
     """chamada_funcao : ID ABRE_PARENTESE lista_argumentos FECHA_PARENTESE"""
 
@@ -748,6 +752,7 @@ def p_chamada_funcao(p):
     else:
         p[1].parent = pai
 
+
 def p_lista_argumentos(p):
     """lista_argumentos : lista_argumentos VIRGULA expressao
                     | expressao
@@ -767,72 +772,60 @@ def p_lista_argumentos(p):
     else:
         p[1].parent = pai
 
+
 def p_vazio(p):
     """vazio : """
 
     pai = MyNode(name='vazio', type='VAZIO')
     p[0] = pai
 
-def p_error(p):
-    if p and detailedLogs:
-        line_start = source_file.rfind('\n', 0, p.lexpos) + 1
 
-        print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
+def p_error(p):
+
+    if p:
+        token = p
+        print("Erro:[{line},{column}]: Erro próximo ao token '{token}'".format(
+            line=token.lineno, column=token.lineno, token=token.value))
+
+# Programa principal.
+
 
 def main():
-
-    global detailedLogs, root, source_file
-
-    error, detailedLogs, showTree = False, False, False
-    root, source_file = None, None
-
-    # pegar nome do arquivo
-    try:
-        aux = argv[1].split('.')
-    except:
-        print('Arquivo inválido!')
-        return
-    
-    # verificar extensão
+    # argv[1] = 'teste.tpp'
+    aux = argv[1].split('.')
     if aux[-1] != 'tpp':
-        print('O arquivo selecionado não tem a extensao .tpp!')
-        return
-
-    # verficar flag de detalhado
-    if 'd' in argv:
-        detailedLogs = True
-    if 'st' in argv:
-        showTree = True
-
-    # abrir o arquivo
+      raise IOError("Not a .tpp file!")
     data = open(argv[1])
+
     source_file = data.read()
-    
-    # passar o arquivo para o parser
     parser.parse(source_file)
 
     if root and root.children != ():
+        print("Generating Syntax Tree Graph...")
+        DotExporter(root).to_picture(argv[1] + ".ast.png")
+        UniqueDotExporter(root).to_picture(argv[1] + ".unique.ast.png")
+        DotExporter(root).to_dotfile(argv[1] + ".ast.dot")
+        UniqueDotExporter(root).to_dotfile(argv[1] + ".unique.ast.dot")
+        print(RenderTree(root, style=AsciiStyle()).by_attr())
+        print("Graph was generated.\nOutput file: " + argv[1] + ".ast.png")
 
-        if showTree:
-            print('\nArvore Sintática:')
-            DotExporter(root).to_picture(argv[1] + '.ast.png')
-            UniqueDotExporter(root).to_picture(argv[1] + '.unique.ast.png')
-            DotExporter(root).to_dotfile(argv[1] + '.ast.dot')
-            UniqueDotExporter(root).to_dotfile(argv[1] + '.unique.ast.dot')
-            print(RenderTree(root, style=AsciiStyle()).by_attr())
-            print('\nArvore gerada com sucesso.\nArquivo: ' + argv[1] + '.ast.png')
+        DotExporter(root, graph="graph",
+                    nodenamefunc=MyNode.nodenamefunc,
+                    nodeattrfunc=lambda node: 'label=%s' % (node.type),
+                    edgeattrfunc=MyNode.edgeattrfunc,
+                    edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
 
-            DotExporter(root, graph="graph",
-                        nodenamefunc=MyNode.nodenamefunc,
-                        nodeattrfunc=lambda node: 'label=%s' % (node.type),
-                        edgeattrfunc=MyNode.edgeattrfunc,
-                        edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
+        # DotExporter(root, nodenamefunc=lambda node: node.label).to_picture(argv[1] + ".ast3.png")
 
     else:
-        print('\nNão foi possível gerar a Árvore Sintática.')
+        print("Unable to generate Syntax Tree.")
+    print('\n\n')
 
-# construir o parser
-parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True, debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
+# Build the parser.
+# __file__ = "02-compiladores-analise-sintatica-tppparser.ipynb"
+# parser = yacc.yacc(optimize=True, start='programa', debug=True, debuglog=log)
+parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True,
+                   debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
 
 if __name__ == "__main__":
     main()

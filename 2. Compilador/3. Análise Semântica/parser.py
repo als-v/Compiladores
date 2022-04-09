@@ -1,12 +1,48 @@
 import pandas as pd
 
+def getColunmValue(data, line, column):
+    return data.loc[(data['linha'] == line) & (data['coluna'] == column)]
+
+def getEscopeByLine(data, lineInit, lineEnd):
+    return data.loc[(data['linha'] >= lineInit) & (data['linha'] <= lineEnd)]
+
 def searchScope(data, line):
-    # pega todos os valores depois da linha
-    dataLine = data.loc[data['linha'] >= line]
+    repeat = True
+    qtdFim = 0
+
+    # enquanto poder repetir
+    while(repeat):
+
+        # pego a proxima linha
+        line += 1
+
+        # pego os dados da linha
+        dataLine = data.loc[data['linha'] == line]
+
+        # caso seja um token 'fim'
+        if len(dataLine.loc[dataLine['token'] == 'FIM']) == 1:
+
+            # verifico se o token fim e referente ao escopo
+            if qtdFim > 0:
+
+                # se nao for, apenas decremento
+                qtdFim -= 1
+
+            # caso o token fim seja referente ao escopo
+            elif qtdFim == 0:
+
+                # nao necessito repetir mais
+                repeat = False
+        
+        # caso seja um token 'se'
+        elif len(dataLine.loc[dataLine['token'] == 'SE']) == 1:
+            
+            # aumento a quantidade do token 'fim'
+            qtdFim += 1
 
     # pego todos os tokens FIM e vejo a linha da primeira ocorrencia
     lineEndScope = min(dataLine.loc[dataLine['token'] == 'FIM', 'linha'].to_list())
-
+    
     # retorno todos os valores entre a linha e a linha final
     return dataLine.loc[dataLine['linha'] <= lineEndScope]
 
@@ -113,7 +149,7 @@ def getFunctions(dataPD):
         if len(dataLine) > 0:
 
             # se não for uma função ja definida (como escreva() e leia())
-            if ((not searchTokenLineData(dataPD, line, 'ESCREVA')) and (not searchTokenLineData(dataPD, line, 'LEIA'))):
+            if ((not searchTokenLineData(dataPD, line, 'ESCREVA')) and (not searchTokenLineData(dataPD, line, 'LEIA') and (not searchTokenLineData(dataPD, line, 'RETORNA')))):
 
                 # vejo se possui o token '(' e se não é uma atribuição
                 if ((searchTokenLineData(dataPD, line, 'ABRE_PARENTESE')) and (not searchTokenLineData(dataPD, line, 'ATRIBUICAO'))):
@@ -187,7 +223,7 @@ def getFunctions(dataPD):
                             functionLineEnd = max(functionTotal['linha'])
                             
                             # adiciono a função
-                            functions.append([functionName, functionReturn, functionArgs, functionLineStart, functionLineEnd])
+                            functions.append([functionReturn, functionName, functionArgs, functionLineStart, functionLineEnd])
     
     return functions
 
@@ -257,11 +293,51 @@ def getVariables(dataPD, functions):
                             escope = findEscope(line, functions)
 
                             # adiciono a variavel
-                            variables.append([variableType, variableName, escope, variableLine, []])
+                            variables.append([variableType, variableName, escope, variableLine, False, []])
+                
+                # caso a linha tenha o token ','
+                elif len(dataLine.loc[dataLine['token'] == 'VIRGULA']) >= 1:
+                   
+                   # pego todas as variaveis
+                    dataLineIDs = dataLine.loc[dataLine['token'] == 'ID']
+                    detaLineIDs = dataLine.values
+                    
+                    # o tipo de retorno
+                    variableType = dataLine.loc[(dataLine['token'] == 'INTEIRO') | (dataLine['token'] == 'FLUTUANTE'), 'token'].values[0]
+                    
+                    # a linha de declaracao da variavel
+                    variableLine = min(dataLine['linha'])
+
+                    # o escopo da variavel
+                    escope = findEscope(line, functions)
+
+                    # para cada variavel
+                    for declaration in dataLineIDs.values:
+
+                        # nome da variavel
+                        variableName = declaration[1]
+
+                        # dimensoes
+                        variableDimensions = []
+
+                        # pego o proximo valor
+                        nextValueColumn = getColunmValue(dataPD, line, declaration[3]+1)
+
+                        # verifico se possui dimensões
+                        if len(nextValueColumn.loc[nextValueColumn['token'] == 'ABRE_COLCHETE']):
+                            
+                            # pego o indice
+                            valueColumn = searchDataColumn(dataPD, line, declaration[3]+2)
+                            
+                            # se for um token 'NUM_INTEIRO'
+                            if len(valueColumn.loc[(valueColumn['token'] == 'NUM_INTEIRO') | (valueColumn['token'] == 'NUM_PONTO_FLUTUANTE')]) == 1:
+                                variableDimensions.append(valueColumn['valor'].values[0])
+
+                        # adiciono na lista
+                        variables.append([variableType, variableName, escope, variableLine, False, variableDimensions])
                 
                 else:
 
-                    #TODO: verificar o caso de ter mais de uma declaração separado por ','
                     # tipo da variavel
                     variableType = dataLine.loc[(dataLine['token'] == 'INTEIRO') | (dataLine['token'] == 'FLUTUANTE'), 'token'].values[0]
                     
@@ -287,20 +363,30 @@ def getVariables(dataPD, functions):
                             valueColumn = searchDataColumn(dataPD, line, valuesDimension[3]+1)
                             
                             # se for um token 'NUM_INTEIRO'
-                            if len(valueColumn.loc[valueColumn['token'] == 'NUM_INTEIRO']) == 1:
+                            if len(valueColumn.loc[(valueColumn['token'] == 'NUM_INTEIRO') | (valueColumn['token'] == 'NUM_PONTO_FLUTUANTE')]) == 1:
                                 variableDimensions.append(valueColumn['valor'].values[0])
                     
                     # procuro o escopo
                     escope = findEscope(line, functions)
 
                     # salvo a variavel
-                    variables.append([variableType, variableName, escope, variableLine, variableDimensions])
+                    variables.append([variableType, variableName, escope, variableLine, False, variableDimensions])
     
     return variables
 
 def showList(list):
     for item in list:
         print(item)
+
+def createFunctionPD(functions):
+    functionsPD = pd.DataFrame(functions, columns=['tipo', 'nome', 'parametros', 'linha_inicio', 'linha_fim'])
+    
+    return functionsPD
+
+def createVariablePD(variables):
+    variablesPD = pd.DataFrame(variables, columns=['tipo', 'nome', 'escope', 'linha', 'using', 'dimensoes'])
+
+    return variablesPD
 
 def execute():
 
@@ -312,12 +398,10 @@ def execute():
 
     # criar lista de funções
     functions = getFunctions(dataPD)
-    print('Funções:\n')
-    showList(functions)
+    functionsPD = createFunctionPD(functions)
 
     # criar lista de variaveis
     variables = getVariables(dataPD, functions)
-    print('\nVariaveis:\n')
-    showList(variables)
+    variablesPD = createVariablePD(variables)
 
-execute()
+    return dataPD, functionsPD, variablesPD

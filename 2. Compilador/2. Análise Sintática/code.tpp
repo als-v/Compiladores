@@ -5,8 +5,6 @@
     inteiro principal()
         torre_eiffel()
     fim}
-inteiro: c
-inteiro principal(inteiro: n, inteiro: b)
-inteiro: d
+inteiro principal(inteiro: a, inteiro: b)
+    inteiro: c, d[1.2][2]
 fim
-inteiro: e

@@ -19,6 +19,9 @@ logging.basicConfig(
 
 log = logging.getLogger()
 
+def runLex(file):
+    subprocess.run(['python3', 'lex.py', file, 'd'])
+
 def mostrarErro(p):
 
     if detailedLogs:
@@ -774,38 +777,25 @@ def p_vazio(p):
     p[0] = pai
 
 def p_error(p):
+    error = True
+
     if p and detailedLogs:
         line_start = source_file.rfind('\n', 0, p.lexpos) + 1
 
         print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
 
-def main():
+def main(file, detailedLogsParameter = False, showTree = False):
 
-    global detailedLogs, root, source_file
+    global detailedLogs, root, source_file, error
+    detailedLogs = detailedLogsParameter
 
-    error, detailedLogs, showTree = False, False, False
+    error = False
     root, source_file = None, None
 
-    # pegar nome do arquivo
-    try:
-        aux = argv[1].split('.')
-    except:
-        print('Arquivo inválido!')
-        return
-    
-    # verificar extensão
-    if aux[-1] != 'tpp':
-        print('O arquivo selecionado não tem a extensao .tpp!')
-        return
-
-    # verficar flag de detalhado
-    if 'd' in argv:
-        detailedLogs = True
-    if 'st' in argv:
-        showTree = True
+    runLex(argv[1])
 
     # abrir o arquivo
-    data = open(argv[1])
+    data = open(file)
     source_file = data.read()
     
     # passar o arquivo para o parser
@@ -830,7 +820,10 @@ def main():
 
     else:
         print('\nNão foi possível gerar a Árvore Sintática.')
+        error = True
 
+    return error
+    
 # construir o parser
 parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True, debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
 
