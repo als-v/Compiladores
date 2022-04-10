@@ -56,6 +56,18 @@ def searchLineByTwoToken(data, line, token1, token2):
     
     return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
 
+def searchLineByTwoTokenByEnd(data, line, token1, token2):
+    # pega todos os valores da linha
+    lineData = searchDataLine(data, line)
+
+    # filtra pelo token
+    columnToken1 = lineData.loc[lineData['token'] == token1, 'coluna'].values[0]
+    columnToken2 = lineData.loc[lineData['token'] == token2, 'coluna']
+    sizeColumnToken = len(columnToken2)-1
+    columnToken2 = columnToken2.values[sizeColumnToken]
+    
+    return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
+
 def searchDataLineBeforeToken(data, line, token):
     # procuro os tokens da linha
     dataLine = searchDataLine(data, line)
@@ -122,6 +134,19 @@ def isInFunction(functions, line):
 
     # passo por todas as funções
     for function in functions:
+
+        # caso a declaração esteja entre o inicio e o fim de uma funcao
+        if(function[3] < line and line < function[4]):
+            isInFunction = True
+            break
+
+    return isInFunction
+
+def isInFunctionDF(functionsDF, line):
+    isInFunction = False
+
+    # passo por todas as funções
+    for function in functionsDF.values:
 
         # caso a declaração esteja entre o inicio e o fim de uma funcao
         if(function[3] < line and line < function[4]):
@@ -227,12 +252,155 @@ def getFunctions(dataPD):
     
     return functions
 
+def verifyFunctions(dataPD, functionsPD, variablesPD, errors):
+    verifyFunctionsLine(dataPD, functionsPD, errors)
+    verifyFunctionsRepeat(dataPD, functionsPD, errors)
+    verifyFunctionReturn(dataPD, functionsPD, variablesPD, errors)
+
+def verifyFunctionReturn(dataPD, functionsPD, variablesPD, errors):
+
+    # para cada funcao
+    for function in functionsPD.values:
+
+        # pego o escopo
+        functionEscope = getEscopeByLine(dataPD, function[3], function[4])
+
+        # caso não tenha retorno, mas nao seja vazio
+        if ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) == 0) and (function[0] != 'VAZIO')):
+                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna vazio'])
+        
+        # caso tenha retorno
+        elif ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) > 0)):
+                
+                # pego a linha do retorno
+                functionReturn = functionEscope.loc[functionEscope['token'] == 'RETORNA']
+
+                # pego os valores para retornar
+                valuesReturn = searchLineByTwoTokenByEnd(dataPD, functionReturn['linha'].values[0], 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+
+                error = False
+
+                # para cada um dos valores
+                for values in valuesReturn.values:
+                    
+                    # caso seja uma variavel ou uma chamada de funcao
+                    if values[0] == 'ID':
+
+                        # vejo se e uma variavel
+                        valueVariableId = variablesPD.loc[variablesPD['nome'] == values[1]]
+
+                        # caso for
+                        if len(valueVariableId) > 0:
+
+                            # pego seu valor
+                            valueVariableId = valueVariableId.values[0]
+
+                            # verifico o retorno
+                            if valueVariableId[0] != function[0]:
+                                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna ' + valueVariableId[0].lower()])
+
+                        else:
+                            
+                            # pego a funcao
+                            valueVariableId = functionsPD.loc[functionsPD['nome'] == values[1]]
+                            
+                            # caso exista
+                            if len(valueVariableId) > 0:
+
+                                # pego seu valor
+                                valueVariableId = valueVariableId.values[0]
+                                
+                                # verifico seu retorno
+                                if valueVariableId[0] != function[0]:
+                                    errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna ' + valueVariableId[0].lower()])
+                                    break
+
+                    elif values[0] == 'NUM_INTEIRO':
+                        
+                        # verifico o retorno
+                        if function[0] != 'INTEIRO':
+                            errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna inteiro'])
+                            break
+                    
+                    elif values[0] == 'NUM_PONTO_FLUTUANTE':
+                        
+                        # verifico o retorno
+                        if function[0] != 'FLUTUANTE':
+                            errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna flutuante'])
+                            break
+
+def verifyFunctionsRepeat(dataPD, functionsPD, errors):
+    
+    for funcoes in functionsPD.values:
+        dataSearch = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == funcoes[1])]
+        
+        if len(dataSearch) == 1:
+            if len(dataSearch.loc[dataSearch['valor'] == 'principal']) == 0:
+                errors.append(['AVISO', 'Aviso: Função “' + funcoes[1] + '” declarada, mas não utilizada'])
+
+def verifyFunctionsLine(dataPD, functionsPD, errors):
+
+    # linha de inicio
+    lineStart = dataPD['linha'].min()
+    
+    # linha final
+    lineEnd = dataPD['linha'].max()
+
+    # para cada linha
+    for line in range(lineStart, lineEnd+1):
+
+        # busco os dados da linha
+        dataLine = searchDataLine(dataPD, line)
+
+        # se existir algum token
+        if len(dataLine) > 0:
+
+            # se não for uma função ja definida (como escreva() e leia())
+            if ((not searchTokenLineData(dataPD, line, 'ESCREVA')) and (not searchTokenLineData(dataPD, line, 'LEIA') and (not searchTokenLineData(dataPD, line, 'RETORNA')))):
+
+                # vejo se possui o token '(' e se não é uma atribuição
+                if ((searchTokenLineData(dataPD, line, 'ABRE_PARENTESE')) and (not searchTokenLineData(dataPD, line, 'ATRIBUICAO'))):
+                    
+                    # procuro apenas os ID's
+                    lineIDs = dataLine.loc[dataLine['token'] == 'ID']
+                    qtdParams = len(lineIDs) - 1
+
+                    # caso esteja dentro de uma funcao
+                    if(len(lineIDs['linha']) > 0 and isInFunctionDF(functionsPD, lineIDs['linha'].values[0])):
+                        
+                        functionName = dataLine.loc[dataLine['token'] == 'ID', 'valor'].values[0]
+                        
+                        functionPD = functionsPD.loc[functionsPD['nome'] == functionName]
+                        tamFunctionPD = len(functionPD)
+                        
+                        if functionName == 'principal' and tamFunctionPD == 1:
+                            errors.append(['ERRO', 'Erro: Chamada para a função principal não permitida'])
+                        
+                        if tamFunctionPD == 0:
+                            errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
+                        else:
+                            functionLineStart = functionPD['linha_inicio'].values[0]
+                            functionLineEnd = functionPD['linha_fim'].values[0]
+
+                            if (functionLineStart < line and line < functionLineEnd):
+                                errors.append(['AVISO', 'Aviso: Chamada recursiva para “' + functionName + '”'])
+
+                            if qtdParams > len(functionPD['parametros'].values[0]):
+                                errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros maior que o declarado'])
+                            elif qtdParams < len(functionPD['parametros'].values[0]):
+                                errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
+                else:
+                    #TODO: tratar caso de atribuição
+                    pass
+def verifyVariables(dataPD, functionsPD, variablesPD, errors):
+    pass
+
 def findEscope(line, functions):
     escope = 'global'
 
     for function in functions:
         if(function[3] <= line and line <= function[4]):
-            escope = function[0]
+            escope = function[1]
             break
     
     return escope
@@ -404,4 +572,8 @@ def execute():
     variables = getVariables(dataPD, functions)
     variablesPD = createVariablePD(variables)
 
-    return dataPD, functionsPD, variablesPD
+    errors = []
+    verifyFunctions(dataPD, functionsPD, variablesPD, errors)
+    verifyVariables(dataPD, functionsPD, variablesPD, errors)
+
+    return dataPD, functionsPD, variablesPD, errors

@@ -5,14 +5,17 @@
     inteiro principal()
         torre_eiffel()
     fim}
-inteiro principall(inteiro: a, inteiro: b)
-    principal()
+
+flutuante: teste_flutuante
+
+flutuante principal(inteiro: a, inteiro: b)
+    inteiro: a
+    flutuante: b
+
+    b := teste(a)
+    retorna(1)
 fim
 
-inteiro principal2(inteiro: a, inteiro: b)
-    inteiro: c, d[1.2][2]
-    inteiro: c, d[1.2][2]
-    inteiro: c, d[1.2][2]
-    inteiro: c, d[1.2][2]
-    inteiro: c, d[1.2][2]
+flutuante teste(inteiro: b)
+retorna(teste_flutuante)
 fim
