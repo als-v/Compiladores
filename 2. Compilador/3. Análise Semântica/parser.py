@@ -68,6 +68,20 @@ def searchLineByTwoTokenByEnd(data, line, token1, token2):
     
     return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
 
+def searchLineByTwoTokenByEndPD(data, line, token1, token2):
+    # pega todos os valores da linha
+    lineData = searchDataLine(data, line)
+
+    # filtra pelo token
+    columnToken1 = lineData.loc[lineData['token'] == token1, 'coluna'].values[0]
+    columnToken2 = lineData.loc[lineData['token'] == token2, 'coluna']
+
+    print(columnToken2)
+    sizeColumnToken = len(columnToken2)-1
+    columnToken2 = columnToken2.values[sizeColumnToken]
+    
+    return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
+
 def searchDataLineBeforeToken(data, line, token):
     # procuro os tokens da linha
     dataLine = searchDataLine(data, line)
@@ -392,8 +406,39 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
                 else:
                     #TODO: tratar caso de atribuição
                     pass
+
 def verifyVariables(dataPD, functionsPD, variablesPD, errors):
-    pass
+    verifyVariableUse(dataPD, variablesPD, errors)
+
+def verifyVariableUse(dataPD, variablesPD, errors):
+
+    # para cada variavel
+    for variable in variablesPD.values:
+
+        # encontro as recorrencias da variavel
+        variablePD = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == variable[1])]
+        
+        # caso so tenha uma recorrência
+        if len(variablePD) == 1:
+            errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
+        
+        # acho declarações em outro escopo de funcao
+        anotherDeclarationEscope = variablesPD.loc[(variablesPD['nome'] == variable[1]) & (variablesPD['escope'] == variable[2]) & (variablesPD['linha'] < variable[3])]
+        anotherDeclarationGlobal = variablesPD.loc[(variablesPD['nome'] == variable[1]) & (variablesPD['escope'] == 'global') & (variablesPD['linha'] < variable[3])]
+        
+        # se encontrar no escopo
+        if(len(anotherDeclarationEscope) > 0):
+            errors.append(['AVISO', 'Aviso: Variável “'+ variable[1] +'” já declarada anteriormente'])
+
+        else:
+            
+            # se encontrar no escopo global
+            if len(anotherDeclarationGlobal) > 0:
+                errors.append(['AVISO', 'Aviso: Variável “'+ variable[1] +'” já declarada anteriormente'])
+
+        # caso nenhuma das recorrências tenha sido inicializada
+        if (len(variablePD) == (len(anotherDeclarationEscope) + len(anotherDeclarationGlobal) + 1)):
+                errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
 
 def findEscope(line, functions):
     escope = 'global'
@@ -405,7 +450,18 @@ def findEscope(line, functions):
     
     return escope
 
-def getVariables(dataPD, functions):
+def findVariable(variables, variableName, escope):
+    found = False
+
+    for variable in variables:
+
+        if ((variable[1] == variableName) and (variable[2] == escope)):
+            found = True
+            break
+
+    return found
+
+def getVariables(dataPD, functions, errors):
     variables = []
 
     # linha de inicio
@@ -460,8 +516,12 @@ def getVariables(dataPD, functions):
                             # escopo da variavel
                             escope = findEscope(line, functions)
 
+                            if (findVariable(variables, variableName, escope)):
+                                errors.append(['AVISO', 'Aviso: Variável “' + variableName + '” já declarada anteriormente'])
+
                             # adiciono a variavel
                             variables.append([variableType, variableName, escope, variableLine, False, []])
+                            
                 
                 # caso a linha tenha o token ','
                 elif len(dataLine.loc[dataLine['token'] == 'VIRGULA']) >= 1:
@@ -478,6 +538,9 @@ def getVariables(dataPD, functions):
 
                     # o escopo da variavel
                     escope = findEscope(line, functions)
+
+                    if(findVariable(variables, variableName, escope)):
+                        errors.append(['AVISO', 'Aviso: Variável “' + variableName + '” já declarada anteriormente'])
 
                     # para cada variavel
                     for declaration in dataLineIDs.values:
@@ -537,6 +600,9 @@ def getVariables(dataPD, functions):
                     # procuro o escopo
                     escope = findEscope(line, functions)
 
+                    if(findVariable(variables, variableName, escope)):
+                        errors.append(['AVISO', 'Aviso: Variável “' + variableName + '” já declarada anteriormente'])
+
                     # salvo a variavel
                     variables.append([variableType, variableName, escope, variableLine, False, variableDimensions])
     
@@ -569,10 +635,10 @@ def execute():
     functionsPD = createFunctionPD(functions)
 
     # criar lista de variaveis
-    variables = getVariables(dataPD, functions)
+    errors = []
+    variables = getVariables(dataPD, functions, errors)
     variablesPD = createVariablePD(variables)
 
-    errors = []
     verifyFunctions(dataPD, functionsPD, variablesPD, errors)
     verifyVariables(dataPD, functionsPD, variablesPD, errors)
 

@@ -6,16 +6,9 @@
         torre_eiffel()
     fim}
 
-flutuante: teste_flutuante
+inteiro: aa
 
-flutuante principal(inteiro: a, inteiro: b)
-    inteiro: a
-    flutuante: b
+inteiro principal()
+	flutuante: aa
 
-    b := teste(a)
-    retorna(1)
-fim
-
-flutuante teste(inteiro: b)
-retorna(teste_flutuante)
 fim

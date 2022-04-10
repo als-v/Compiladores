@@ -83,12 +83,13 @@ def main():
     if not error:
         dataPD, functionsPD, variablesPD, errors = parser.execute()
 
-        print('antes de executar')
-        showErrors(errors)
+        showListPD(variablesPD)
+        # print('antes de executar')
+        # showErrors(errors)
         # showListPD(functionsPD)
         semanticAnalysis(dataPD, functionsPD, variablesPD, errors)
         
-        print('\n\ndepois de executar')
+        # print('\n\ndepois de executar')
         showErrors(errors)
     else:
         print('Erro')
