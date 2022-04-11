@@ -48,6 +48,8 @@ def showErrors(errors):
     for err in errors:
         if err[0] == 'ERRO':
             print(err[1])
+    
+    print('\n')
     for err in errors:
         if err[0] == 'AVISO':
             print(err[1])
@@ -78,12 +80,13 @@ def main():
         showTree = True
 
     runLex(argv[1])
-    error = sintatica.main(argv[1], detailedLogs, showTree)
+    # error = sintatica.main(argv[1], detailedLogs, showTree)
+    error = []
     
     if not error:
         dataPD, functionsPD, variablesPD, errors = parser.execute()
 
-        showListPD(variablesPD)
+        # showListPD(variablesPD)
         # print('antes de executar')
         # showErrors(errors)
         # showListPD(functionsPD)

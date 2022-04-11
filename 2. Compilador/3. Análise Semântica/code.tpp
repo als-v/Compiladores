@@ -1,14 +1,7 @@
-{    inteiro principal2()
-        principal()
-    fim
-
-    inteiro principal()
-        torre_eiffel()
-    fim}
-
-inteiro: aa
-
 inteiro principal()
-	flutuante: aa
+    flutuante: b
+    inteiro: bbc
 
+    b := bbc
+    retorna(1)
 fim
