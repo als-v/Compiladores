@@ -360,6 +360,7 @@ def verifyFunctionsRepeat(dataPD, functionsPD, errors):
             if len(dataSearch.loc[dataSearch['valor'] == 'principal']) == 0:
                 errors.append(['AVISO', 'Aviso: Função “' + funcoes[1] + '” declarada, mas não utilizada'])
 
+
 def verifyFunctionsLine(dataPD, functionsPD, errors):
 
     # linha de inicio
@@ -437,11 +438,12 @@ def verifyVariableUse(dataPD, variablesPD, errors):
 
         # encontro as recorrencias da variavel
         variablePD = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == variable[1])]
-        
+        totalDeclarations = len(variablePD)
+
         # caso so tenha uma recorrência
         if len(variablePD) == 1:
             errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
-        
+
         # acho declarações em outro escopo de funcao
         anotherDeclarationEscope = variablesPD.loc[(variablesPD['nome'] == variable[1]) & (variablesPD['escope'] == variable[2]) & (variablesPD['linha'] < variable[3])]
         anotherDeclarationGlobal = variablesPD.loc[(variablesPD['nome'] == variable[1]) & (variablesPD['escope'] == 'global') & (variablesPD['linha'] < variable[3])]
@@ -459,6 +461,16 @@ def verifyVariableUse(dataPD, variablesPD, errors):
         # caso nenhuma das recorrências tenha sido inicializada
         if (len(variablePD) == (len(anotherDeclarationEscope) + len(anotherDeclarationGlobal) + 1)):
                 errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
+
+        for var in variablePD.values:
+            lineVar = searchDataLine(dataPD, var[2])
+
+            if len(lineVar.loc[lineVar['token'] == 'ESCREVA']) > 0:
+                totalDeclarations -= 1
+        
+        # caso so tenha uma recorrência
+        if totalDeclarations == 1:
+            errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
 
 def findEscope(line, functions):
     escope = 'global'
@@ -644,7 +656,80 @@ def createVariablePD(variables):
 
 def verifyAssignment(dataPD, functionsPD, variablesPD, errors):
     verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors)
-    #TODO: olhar se uma funcao esta passando os parametros corretos em uma atribuicao
+    verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors)
+
+def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
+
+    # para todas as atribuicoes
+    assignmentPD = dataPD.loc[dataPD['token'] == 'ATRIBUICAO']
+
+    # para cada atribuicao
+    for assignment in assignmentPD.values:
+        
+        # pego a linha
+        assignmentLine = searchDataLine(dataPD, assignment[2])
+
+        # pego o valor da direita
+        assignmentDir = searchDataLineAfterToken(dataPD, assignment[2], 'ATRIBUICAO')
+
+        # caso tenha uma funcao
+        if len(assignmentDir.loc[assignmentDir['token'] == 'ABRE_PARENTESE']) > 0:
+            
+            # pego todos os IDS
+            dataDir = assignmentDir.loc[assignmentDir['token'] == 'ID']
+
+            # para cada um deles
+            for variableAssignmentDir in dataDir.values:
+
+                # verifico na tabela de funcoes
+                functionDir = functionsPD.loc[functionsPD['nome'] == variableAssignmentDir[1]]
+
+                allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
+                idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
+                
+                qtdParams = len(idCalls)
+
+                # caso a quantidade de parametros seja maior/menor
+                if qtdParams > len(functionDir['parametros'].values[0]):
+                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros maior que o declarado'])
+                
+                elif qtdParams < len(functionDir['parametros'].values[0]):
+                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
+
+
+def verifyEndCallFunction(dataPD, name, line, columnInit):
+    dataLine = searchDataLine(dataPD, line)
+
+    initCall = dataLine.loc[dataLine['coluna'] == (columnInit + len(name))]
+    columnFinal = columnInit + len(name)
+    print(columnFinal + len(initCall['valor'].values[0]))
+
+    repeat = True
+    repeatCount = 1
+    auxInfinity = 0
+
+    while(repeat):
+        proxToken = dataLine.loc[dataLine['coluna'] == (columnFinal + len(initCall['valor'].values[0]))]
+
+        if len(proxToken) != 0:
+
+            columnFinal = columnFinal + len(proxToken['valor'].values[0])
+
+            if (proxToken['token'].values[0] == 'ABRE_PARENTESE'):
+                repeatCount += 1
+            elif (proxToken['token'].values[0] == 'FECHA_PARENTESE'):
+                repeatCount -= 1
+            
+            if(repeatCount == 0):
+                repeat = False
+        else:
+            columnFinal += 1
+            auxInfinity += 1
+
+            if auxInfinity > 10:
+                break
+    
+    return dataPD.loc[(dataPD['linha'] == line) & (dataPD['coluna'] > columnInit) & (dataPD['coluna'] <= columnFinal)]
 
 def isFunction(dataPD, line, name):
     function = False
@@ -680,7 +765,7 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
 
     # para cada atribuicao
     for assignment in assignmentPD.values:
-
+        
         # pego a linha
         assignmentLine = searchDataLine(dataPD, assignment[2])
 
@@ -739,41 +824,67 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
 
                 # caso nao tenha nenhum erro
                 if variableDirType != '' and variableEsqType != '':
-
+                    
                     # verifico se os tipos sao diferentes
                     if variableEsqType != variableDirType:
                         if not isVariable:
-                            errors.append(['AVISO', 'Aviso: Coerção implícita do valor passado para váriavel “' +  dataEsq['valor'].values[0] + '” da função “' + variableAssignmentDir[1] + '”'])
+                            errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” retorna ' + variableDirType.lower()])
                             break
                         else:
-                            errors.append(['AVISO', 'Aviso: Coerção implícita do valor atribuído para “' +  dataEsq['valor'].values[0] + '”'])
+                            errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + 'e “' + dataEsq['valor'].values[0] + '” ' + variableDirType.lower()])
 
         else:
             
             # procuro todos os IDs
             dataDir = assignmentDir.loc[assignmentDir['token'] == 'ID']
+            
+            if len(dataDir) > 0:
 
-            # para cada um deles
-            for variableAssignmentDir in dataDir.values:
-
-                # procuro na tabela de variaveis
-                variableDir = variablesPD.loc[variablesPD['nome'] == variableAssignmentDir[1]]
-
-                # caso nao encontre
-                if len(variableDir) == 0:
-                    errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
-                    variableDirType = ''
+                # para cada um deles
+                for variableAssignmentDir in dataDir.values:
+                    
+                    # procuro na tabela de variaveis
+                    variableDir = variablesPD.loc[variablesPD['nome'] == variableAssignmentDir[1]]
                 
+                    # caso nao encontre
+                    if len(variableDir) == 0:
+                        errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
+                        variableDirType = ''
+                    
+                    else:
+                        
+                        # encontrar o tipo de variavel daquele escopo
+                        varEscope = findEscopeVariable(variableDir, assignment[2])
+                        variableDirType = varEscope[0]
+
+                    # caso nao tenha nenhum erro
+                    if variableDirType != '' and variableEsqType != '':
+                        
+                        # caso os tipos sejam diferentes
+                        if variableEsqType != variableDirType:
+                            errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” ' + variableDirType.lower()])
+            else:
+
+                if variableEsqType == 'INTEIRO':
+                    searchType = 'NUM_PONTO_FLUTUANTE'
+                    variableDirType = 'FLUTUANTE'
                 else:
-                    variableDirType = variableDir['tipo'].values[0]
+                    searchType = 'NUM_INTEIRO'
+                    variableDirType = 'INTEIRO'
+                
+                dataDir = assignmentDir.loc[assignmentDir['token'] == searchType]
+                
+                for err in dataDir.values:
+                    errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + err[1] + '” ' + variableDirType.lower()])
 
-                # caso nao tenha nenhum erro
-                if variableDirType != '' and variableEsqType != '':
+def findEscopeVariable(variablePD, lineAtribuition):
 
-                    # caso os tipos sejam diferentes
-                    if variableEsqType != variableDirType:
-                        errors.append(['AVISO', 'Aviso: Coerção implícita do valor atribuído para “' +  dataEsq['valor'].values[0] + '”'])
-        
+    escopeVar = variablePD.loc[variablePD['linha'] < lineAtribuition]
+    position = len(escopeVar) - 1
+    
+    return escopeVar.values[position]
+
+
 def execute():
 
     # pegar a lista com os tokens

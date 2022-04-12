@@ -12,47 +12,48 @@ def mainFunction(dataPD, functionsPD, variablesPD, errors):
     if len(principal) == 0:
         errors.append(['ERRO', 'Erro: Função principal não declarada'])
 
-    for functions in functionsPD.values:
-        lineStart = functions[3] + 1
-        lineEnd = parser.searchScope(dataPD, functions[3])['linha'].values[0]
+def arrayVerify(dataPD, variablesPD, errors):
+    variableArray = variablesPD.loc[variablesPD['dimensoes'].str.len() != 0]
 
-        dataLine = parser.getEscopeByLine(dataPD, lineStart, lineEnd)
-        dataLineId = dataLine.loc[dataLine['token'] == 'ID']
+    if len(variableArray) > 0:
+        for variable in variableArray.values:
+            for dimensions in variable[5]:
+                try:
+                    dim = int(dimensions)
+                except:
+                    errors.append(['ERRO', 'Erro: Índice de array “' + variable[1] + '” não inteiro'])
 
-        dataLinePrincipal = dataLineId.loc[dataLineId['valor'] == 'principal']
+def variablesVerify(dataPD, functionsPD, variablesPD, errors):
+    allID = dataPD.loc[dataPD['token'] == 'ID']
 
-        for principalRecurrence in range(len(dataLinePrincipal)):
-            # errors.append(['ERROR', 'Erro: Chamada para a função principal não permitida'])
-            pass
-def declarations(dataPD, functionsPD, variablesPD):
-    # for idLine in dataLineId.values:
-    #             isFunction = True
-    #             isVariable = True
+    for id in allID.values:
+        # if id[1] not in variablesPD['nome'].values:
+        #     errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
+        if id[1] not in functionsPD['nome'].values:
+            if id[1] not in variablesPD['nome'].values:
+                errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
-    #             if(len(functionsPD.loc[functionsPD['nome'] == idLine[1]]) > 0):
-    #                 isFunction = False
-
-    #             if(len(variablesPD.loc[variablesPD['nome'] == idLine[1]]) > 0):
-    #                 isVariable = False
-
-    #             if(isFunction and isVariable):
-    #                 lineIdData = parser.searchDataLine(dataPD, idLine[2])
-    #                 print(idLine)
-    #                 print(lineIdData)
-                    # errors.append(['ERROR', 'Erro: Variável ou função não declarada'])
-    pass
 def semanticAnalysis(dataPD, functionsPD, variablesPD, errors):
     mainFunction(dataPD, functionsPD, variablesPD, errors)
+    arrayVerify(dataPD, variablesPD, errors)
+    variablesVerify(dataPD, functionsPD, variablesPD, errors)
 
 def showErrors(errors):
+
+    errosNotRepeat = []
+
+    print('')
     for err in errors:
         if err[0] == 'ERRO':
-            print(err[1])
-    
-    print('\n')
+            if err[1] not in errosNotRepeat:
+                print(err[1])
+                errosNotRepeat.append(err[1])
+    print('')
     for err in errors:
         if err[0] == 'AVISO':
-            print(err[1])
+            if err[1] not in errosNotRepeat:
+                print(err[1])
+                errosNotRepeat.append(err[1])
 
 def showListPD(lista):
     print(lista)
