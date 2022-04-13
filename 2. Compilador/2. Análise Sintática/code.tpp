@@ -5,6 +5,13 @@
     inteiro principal()
         torre_eiffel()
     fim}
-inteiro principal(inteiro: a, inteiro: b)
-    inteiro: c, d[1.2][2]
+
+inteiro: erro
+
+inteiro principal(inteiro: a)
+    inteiro: aa
+
+fim
+
+inteiro meudeus(flutuante: b)
 fim

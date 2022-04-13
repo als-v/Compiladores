@@ -20,22 +20,17 @@ logging.basicConfig(
 log = logging.getLogger()
 
 def mostrarErro(p):
+    global linha
 
     if detailedLogs:
-        print('\nErro:')
         for i in range(len(p)):
             print("p[{}]:{}".format(i, p[i]))
         print(end='\n')
 
-    try:
-        error_line = p.lineno(2)
-    except:
-        error_line = p.lineno(1)
-
-    father = MyNode(name='ERROR::{}'.format(error_line), type='ERROR')
-    logging.error(
-        'Syntax error parsing index rule at line {}'.format(error_line))
+    father = MyNode(name='ERROR::{}'.format(linha), type='ERROR')
+    logging.error('Syntax error parsing index rule at line {}'.format(linha))
     parser.errok()
+
     p[0] = father
 
 #       (programa)
@@ -107,7 +102,9 @@ def p_declaracao_variaveis_error(p):
                                 | tipo DOIS_PONTOS error
     """
 
-    print('\nErro na declaração de variáveis.')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na declaração de variáveis.\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 #   (inicializacao_variaveis)
@@ -191,7 +188,9 @@ def p_indice_error(p):
                 | indice ABRE_COLCHETE error FECHA_COLCHETE
     """
 
-    print('\nErro na definicao do indice (expressao ou indice).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do indice (expressao ou indice).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 #    (tipo)
@@ -227,7 +226,9 @@ def p_declaracao_funcao(p):
 def p_declaracao_funcao_error(p):
     '''declaracao_funcao :  error '''
 
-    print('\nErro ao definir a função.')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro ao definir a função.\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_cabecalho(p):
@@ -261,7 +262,10 @@ def p_cabecalho_error(p):
                 | ID ABRE_PARENTESE lista_parametros FECHA_PARENTESE error FIM
                 | error ABRE_PARENTESE lista_parametros FECHA_PARENTESE corpo FIM 
     """
-    print('\nErro na definicao do cabecalho (lista de parametros, corpo ou id).')
+
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do cabecalho (lista de parametros, corpo ou id).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_lista_parametros(p):
@@ -312,7 +316,9 @@ def p_parametro_error(p):
                 | parametro ABRE_COLCHETE error
     """
 
-    print('\nErro na definicao do parametro (tipo ou parametro).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do parametro (tipo ou parametro).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_corpo(p):
@@ -326,6 +332,17 @@ def p_corpo(p):
 
     if len(p) > 2:
         p[2].parent = pai
+
+'''
+def p_corpo_error(p):
+    """corpo : error
+    """
+
+    global linha, coluna, erroMessage   
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do corpo.\n'.format(linha, coluna, erroMessage))
+    mostrarErro(p)
+'''
 
 def p_acao(p):
     """acao : expressao
@@ -389,7 +406,9 @@ def p_se_error(p):
         | SE expressao ENTAO corpo SENAO corpo
     """
 
-    print('\nErro de definicao SE (expressao ou corpo).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao SE (expressao ou corpo).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_repita(p):
@@ -412,10 +431,14 @@ def p_repita(p):
 
 def p_repita_error(p):
     """repita : error corpo ATE expressao
+            | REPITA error ATE expressao
             | REPITA corpo error expressao
+            | REPITA corpo ATE error
     """
 
-    print('\nErro de definicao REPITA (expressao ou corpo).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao REPITA (expressao ou corpo).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_atribuicao(p):
@@ -438,7 +461,10 @@ def p_atribuicao_error(p):
                     | var ATRIBUICAO error
     """
 
-    print('\nErro na atribuição (atribuicao ou expressao).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro na atribuição (atribuicao ou expressao).\n'.format(linha, coluna, erroMessage))
+
     mostrarErro(p)
 
 def p_leia(p):
@@ -464,7 +490,9 @@ def p_leia(p):
 def p_leia_error(p):
     """leia : LEIA ABRE_PARENTESE error FECHA_PARENTESE"""
 
-    print('\nErro de definicao LEIA (var).')
+    global linha, coluna, erroMessage
+
+    print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao LEIA (var).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
 def p_escreva(p):
@@ -699,7 +727,10 @@ def p_fator(p):
 def p_fator_error(p):
     """fator : ABRE_PARENTESE error FECHA_PARENTESE """
 
-    print('\nErro de definicao do fator.')
+    global linha, coluna, erroMessage
+    
+    print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao do fator.'.format(linha, coluna, erroMessage))
+    
     mostrarErro(p)
 
 def p_numero(p):
@@ -774,16 +805,23 @@ def p_vazio(p):
     p[0] = pai
 
 def p_error(p):
-    if p and detailedLogs:
+    global linha, coluna, erroMessage
+
+    if None != p:
         line_start = source_file.rfind('\n', 0, p.lexpos) + 1
 
-        print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
+        linha = p.lineno
+        coluna = (p.lexpos - line_start) + 1
+        erroMessage = 'Próximo ao token “' + str(p.value) + '”'
+
+    # print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
 
 def main():
 
-    global detailedLogs, root, source_file
+    global detailedLogs, moreDetailedLogs, root, source_file, linha, coluna, erroMessage
 
-    error, detailedLogs, showTree = False, False, False
+    linha, coluna, erroMessage = None, None, None
+    error, detailedLogs,  showTree = False, False, False
     root, source_file = None, None
 
     # pegar nome do arquivo
