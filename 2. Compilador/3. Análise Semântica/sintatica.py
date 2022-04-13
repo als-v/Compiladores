@@ -817,13 +817,12 @@ def main(file, detailedLogsParameter = False, showTree = False):
                         nodeattrfunc=lambda node: 'label=%s' % (node.type),
                         edgeattrfunc=MyNode.edgeattrfunc,
                         edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
-
+        
+        return root, False
     else:
         print('\nNão foi possível gerar a Árvore Sintática.')
-        error = True
+        return None, True
 
-    return error
-    
 # construir o parser
 parser = yacc.yacc(method="LALR", optimize=True, start='programa', debug=True, debuglog=log, write_tables=False, tabmodule='tpp_parser_tab')
 

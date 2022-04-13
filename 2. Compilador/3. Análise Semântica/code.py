@@ -164,6 +164,7 @@ def showListPD(lista, label):
 
 def main():
     
+    # flags
     error, detailedLogs, showTree, showTables = False, False, False, False
 
     # pegar nome do arquivo
@@ -187,16 +188,17 @@ def main():
         showTables = True
 
     runLex(argv[1])
-    # error = sintatica.main(argv[1], detailedLogs, showTree)
-    error = []
-    
-    if not error:
+    root, isSintaticErr = sintatica.main(argv[1], detailedLogs, showTree)
+
+    if not isSintaticErr:
         dataPD, functionsPD, variablesPD, errors = parser.execute()
         semanticAnalysis(dataPD, functionsPD, variablesPD, errors)
         
         if showTables:
             showListPD(functionsPD, 'TABELA DE FUNÇÕES')
             showListPD(variablesPD, 'TABELA DE VARIÁVEIS')
+
+        print(root)
     else:
         print('Erro')
 
