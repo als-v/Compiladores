@@ -193,6 +193,7 @@ def main():
     if not isSintaticErr:
         dataPD, functionsPD, variablesPD, errors = parser.execute()
         semanticAnalysis(dataPD, functionsPD, variablesPD, errors)
+        showErrors(errors)
         
         if showTables:
             showListPD(functionsPD, 'TABELA DE FUNÇÕES')

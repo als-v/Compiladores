@@ -333,16 +333,14 @@ def p_corpo(p):
     if len(p) > 2:
         p[2].parent = pai
 
-'''
-def p_corpo_error(p):
-    """corpo : error
-    """
+# def p_corpo_error(p):
+#     """corpo : corpo error
+#     """
 
-    global linha, coluna, erroMessage   
+#     global linha, coluna, erroMessage   
 
-    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do corpo.\n'.format(linha, coluna, erroMessage))
-    mostrarErro(p)
-'''
+#     print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do corpo.\n'.format(linha, coluna, erroMessage))
+#     mostrarErro(p)
 
 def p_acao(p):
     """acao : expressao
@@ -813,8 +811,6 @@ def p_error(p):
         linha = p.lineno
         coluna = (p.lexpos - line_start) + 1
         erroMessage = 'Próximo ao token “' + str(p.value) + '”'
-
-    # print('\nErro: [linha: {}, coluna: {}]\nPróximo ao token “{}”.'.format(str(p.lineno), str((p.lexpos - line_start) + 1), str(p.value)))
 
 def main():
 

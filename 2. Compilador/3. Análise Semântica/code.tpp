@@ -1,8 +1,10 @@
+inteiro: a[21]
+
 inteiro principal()
     flutuante: b
     inteiro: bbc
     
-    b := bbc
+    a[22] := bbc
     retorna(1)
 fim
 
