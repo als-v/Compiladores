@@ -109,10 +109,38 @@ def variablesVerify(dataPD, functionsPD, variablesPD, errors):
             if id[1] not in variablesPD['nome'].values:
                 errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
+def verifyRead(dataPD, variablesPD, errors):
+
+    # para cada variavel
+    for idx, var in enumerate(variablesPD.values):
+
+        # encontro as recorrencias
+        recurrency = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == var[1])]
+        init = False
+
+        # para cada uma delas
+        for rec in recurrency.values:
+
+            # encontro a linha
+            dataLine = parser.searchDataLine(dataPD, rec[2])
+
+            # caso seja uma atribuicao
+            if len(dataLine.loc[dataLine['token'] == 'ATRIBUICAO']) > 0:
+                init = True
+
+            # caso tenha uma funcao 'leia()' e a variavel nao esta inicializada 
+            if ((len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0) and (not init)):
+                errors.append(['AVISO', 'Aviso: Variável “' + var[1] + '” declarada e não inicializada'])
+
+        # caso ela esteja inicializada, porem nao atualizada na tabela
+        if init and not variablesPD.loc[variablesPD['nome'] == var[1]].values[0][4]:
+            variablesPD.loc[variablesPD['nome'] == var[1], 'using'] = True
+
 def semanticAnalysis(dataPD, functionsPD, variablesPD, errors):
     mainFunction(dataPD, functionsPD, variablesPD, errors)
     arrayVerify(dataPD, variablesPD, errors)
     variablesVerify(dataPD, functionsPD, variablesPD, errors)
+    verifyRead(dataPD, variablesPD, errors)
 
 def showErrors(errors):
 
@@ -131,12 +159,12 @@ def showErrors(errors):
                 print(err[1])
                 errosNotRepeat.append(err[1])
 
-def showListPD(lista):
-    print(lista)
+def showListPD(lista, label):
+    print('\n{}:\n{}'.format(label, lista))
 
 def main():
     
-    error, detailedLogs, showTree = False, False, False
+    error, detailedLogs, showTree, showTables = False, False, False, False
 
     # pegar nome do arquivo
     try:
@@ -155,6 +183,8 @@ def main():
         detailedLogs = True
     if 'st' in argv:
         showTree = True
+    if 'sta' in argv:
+        showTables = True
 
     runLex(argv[1])
     # error = sintatica.main(argv[1], detailedLogs, showTree)
@@ -162,15 +192,11 @@ def main():
     
     if not error:
         dataPD, functionsPD, variablesPD, errors = parser.execute()
-
-        # showListPD(variablesPD)
-        # print('antes de executar')
-        # showErrors(errors)
-        # showListPD(functionsPD)
         semanticAnalysis(dataPD, functionsPD, variablesPD, errors)
         
-        # print('\n\ndepois de executar')
-        showErrors(errors)
+        if showTables:
+            showListPD(functionsPD, 'TABELA DE FUNÇÕES')
+            showListPD(variablesPD, 'TABELA DE VARIÁVEIS')
     else:
         print('Erro')
 
