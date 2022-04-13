@@ -13,15 +13,91 @@ def mainFunction(dataPD, functionsPD, variablesPD, errors):
         errors.append(['ERRO', 'Erro: Função principal não declarada'])
 
 def arrayVerify(dataPD, variablesPD, errors):
+    arrayVerifyDimensions(dataPD, variablesPD, errors)
+    arrayVerifyRange(dataPD, variablesPD, errors)
+
+def arrayVerifyDimensions(dataPD, variablesPD, errors):
+
+    # procuro todos os arranjos
     variableArray = variablesPD.loc[variablesPD['dimensoes'].str.len() != 0]
 
-    if len(variableArray) > 0:
-        for variable in variableArray.values:
-            for dimensions in variable[5]:
-                try:
-                    dim = int(dimensions)
-                except:
-                    errors.append(['ERRO', 'Erro: Índice de array “' + variable[1] + '” não inteiro'])
+    # para cada um deles
+    for variable in variableArray.values:
+
+        # passo pelas suas dimensoes
+        for dimensions in variable[5]:
+
+            # tento fazer o cast para int
+            try:
+                dim = int(dimensions)
+            except:
+
+                # se der erro, o indice nao e inteiro
+                errors.append(['ERRO', 'Erro: Índice de array “' + variable[1] + '” não inteiro'])
+
+def arrayVerifyRange(dataPD, variablesPD, errors):
+
+    # procuro todos os arranjos
+    variableArray = variablesPD.loc[variablesPD['dimensoes'].str.len() != 0]
+
+    # passo por todos os arranjos
+    for var in variableArray.values:
+
+        # pego todas as vezes que foi chamado
+        varDimCalls = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == var[1])]
+        
+        # para cada uma delas
+        for varDim in varDimCalls.values:
+
+            # encontro a linha em que ocorreu
+            dataLine = parser.searchDataLine(dataPD, varDim[2])
+
+            # pego o token ':='
+            dataLineAtt = dataLine.loc[dataLine['token'] == 'ATRIBUICAO']
+
+            # se tiver uma atribuição
+            if len(dataLineAtt) > 0:
+                
+                # procuro os valores que vieram apos
+                dataLineAfterAttr = dataLine.loc[dataLine['coluna'] > dataLineAtt['coluna'].values[0]]
+
+                # para cada um dos ID's
+                for attr in dataLineAfterAttr.loc[dataLineAfterAttr['token'] == 'ID'].values:
+                    
+                    # vejo se o nome é o mesmo da variavel
+                    if var[1] == attr[1]:
+                        
+                        # procuro os valores apos a declaracao
+                        dataLineAttr = dataLineAfterAttr.loc[dataLineAfterAttr['coluna'] > attr[3]]
+                        
+                        # pego todos os indices
+                        dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_INTEIRO']
+                        
+                        # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                        for idx in range(len(var[5])):
+
+                            # caso a dimensao esteja fora do intervalo
+                            if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                
+                # procuro os valores que vieram antes
+                dataLineBeforeAttr = dataLine.loc[dataLine['coluna'] < dataLineAtt['coluna'].values[0]]
+
+                # para cada um dos ID's
+                for attr in dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'ID'].values:
+                    
+                    # vejo se o nome é o mesmo da variavel
+                    if var[1] == attr[1]:
+                        
+                        # pego todos os indices
+                        dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_INTEIRO']
+
+                        # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                        for idx in range(len(var[5])):
+
+                            # caso a dimensao esteja fora do intervalo
+                            if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
 
 def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     allID = dataPD.loc[dataPD['token'] == 'ID']
