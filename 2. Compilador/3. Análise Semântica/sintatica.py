@@ -805,18 +805,14 @@ def main(file, detailedLogsParameter = False, showTree = False):
 
         if showTree:
             print('\nArvore Sintática:')
-            DotExporter(root).to_picture(argv[1] + '.ast.png')
+            # DotExporter(root).to_picture(argv[1] + '.ast.png')
             UniqueDotExporter(root).to_picture(argv[1] + '.unique.ast.png')
-            DotExporter(root).to_dotfile(argv[1] + '.ast.dot')
-            UniqueDotExporter(root).to_dotfile(argv[1] + '.unique.ast.dot')
-            print(RenderTree(root, style=AsciiStyle()).by_attr())
+            # DotExporter(root).to_dotfile(argv[1] + '.ast.dot')
+            # UniqueDotExporter(root).to_dotfile(argv[1] + '.unique.ast.dot')
+            # print(RenderTree(root, style=AsciiStyle()).by_attr())
             print('\nArvore gerada com sucesso.\nArquivo: ' + argv[1] + '.ast.png')
 
-            DotExporter(root, graph="graph",
-                        nodenamefunc=MyNode.nodenamefunc,
-                        nodeattrfunc=lambda node: 'label=%s' % (node.type),
-                        edgeattrfunc=MyNode.edgeattrfunc,
-                        edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
+            # DotExporter(root, graph="graph", nodenamefunc=MyNode.nodenamefunc, nodeattrfunc=lambda node: 'label=%s' % (node.type), edgeattrfunc=MyNode.edgeattrfunc, edgetypefunc=MyNode.edgetypefunc).to_picture(argv[1] + ".ast2.png")
         
         return root, False
     else:

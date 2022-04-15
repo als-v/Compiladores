@@ -1,13 +1,15 @@
-inteiro: a[21]
+inteiro: d
+inteiro: cd
 
-inteiro principal()
+inteiro principal(inteiro: c)
+    inteiro: a
     flutuante: b
-    inteiro: bbc
     
-    a[22] := bbc
+    a := 1
+    b := 2.5
+
     retorna(1)
 fim
 
-inteiro teste(inteiro: a)
-
+teste()
 fim
