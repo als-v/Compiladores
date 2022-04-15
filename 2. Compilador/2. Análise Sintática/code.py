@@ -33,11 +33,6 @@ def mostrarErro(p):
 
     p[0] = father
 
-#       (programa)
-#           |
-#   (lista_declaracoes)
-#     /     |      \
-#   ...    ...     ...
 def p_programa(p):
     """programa : lista_declaracoes"""
 
@@ -49,9 +44,6 @@ def p_programa(p):
     p[0] = programa
     p[1].parent = programa
 
-#       (lista_declaracoes)                          (lista_declaracoes)
-#          /           \                                      |
-# (lista_declaracoes)  (declaracao)                     (declaracao)
 def p_lista_declaracoes(p):
     """lista_declaracoes : lista_declaracoes declaracao
                         | declaracao
@@ -63,11 +55,6 @@ def p_lista_declaracoes(p):
     if len(p) > 2:
         p[2].parent = pai
 
-#      (declaracao)
-#           |
-#  (declaracao_variaveis |
-#   inicializacao_variaveis |
-#   declaracao_funcao)
 def p_declaracao(p):
     """declaracao : declaracao_variaveis
                 | inicializacao_variaveis
@@ -77,11 +64,6 @@ def p_declaracao(p):
     p[0] = pai
     p[1].parent = pai
 
-#      (declaracao_variaveis)
-#      / p[1]    |           \
-# (tipo)    (DOIS_PONTOS)    (lista_variaveis)
-#                |
-#               (:)
 def p_declaracao_variaveis(p):
     """declaracao_variaveis : tipo DOIS_PONTOS lista_variaveis"""
 
@@ -107,9 +89,6 @@ def p_declaracao_variaveis_error(p):
     print('\n[Linha: {}, Coluna: {}] {}: Erro na declaração de variáveis.\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
-#   (inicializacao_variaveis)
-#              |
-#         (atribuicao)
 def p_inicializacao_variaveis(p):
     """inicializacao_variaveis : atribuicao"""
 
@@ -193,9 +172,6 @@ def p_indice_error(p):
     print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do indice (expressao ou indice).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
 
-#    (tipo)
-#      |
-#  (FLUTUANTE)
 def p_tipo(p):
     """tipo : INTEIRO
         | FLUTUANTE
@@ -355,11 +331,6 @@ def p_acao(p):
     p[0] = pai
     p[1].parent = pai
 
-#       ________ (se) ________________________________
-#      /    /          \      \         \      \      \
-# (SE) (expressao)  (ENTAO)  (corpo) (SENAO) (corpo) (FIM)
-#  |       |           |
-# (se)   (...)      (então) ....
 def p_se(p):
     """se : SE expressao ENTAO corpo FIM
           | SE expressao ENTAO corpo SENAO corpo FIM
@@ -816,9 +787,8 @@ def main():
 
     global detailedLogs, moreDetailedLogs, root, source_file, linha, coluna, erroMessage
 
-    linha, coluna, erroMessage = None, None, None
+    root, source_file, linha, coluna, erroMessage = None, None, None, None, None
     error, detailedLogs,  showTree = False, False, False
-    root, source_file = None, None
 
     # pegar nome do arquivo
     try:
