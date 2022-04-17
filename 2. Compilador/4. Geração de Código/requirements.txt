@@ -1,3 +1,4 @@
 ply
 anytree
 pandas
+llvmlite

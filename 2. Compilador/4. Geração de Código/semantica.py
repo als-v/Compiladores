@@ -1,7 +1,9 @@
 import parser
 import sintatica 
 import subprocess
+import podaArvore
 from sys import argv, exit
+from anytree.exporter import UniqueDotExporter
 
 def runLex(file):
     subprocess.run(['python3', 'lex.py', file, 'd'])
@@ -35,6 +37,18 @@ def arrayVerifyDimensions(dataPD, variablesPD, errors):
                 # se der erro, o indice nao e inteiro
                 errors.append(['ERRO', 'Erro: Índice de array “' + variable[1] + '” não inteiro'])
 
+def verifyInteger(list):
+    notErr = True
+
+    for i in list:
+        try:
+            int(i)
+        except:
+            notErr = False
+            break
+    
+    return notErr
+
 def arrayVerifyRange(dataPD, variablesPD, errors):
 
     # procuro todos os arranjos
@@ -42,71 +56,78 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
 
     # passo por todos os arranjos
     for var in variableArray.values:
-
-        # pego todas as vezes que foi chamado
-        varDimCalls = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == var[1])]
         
-        # para cada uma delas
-        for varDim in varDimCalls.values:
+        if verifyInteger(var[5]):
 
-            # encontro a linha em que ocorreu
-            dataLine = parser.searchDataLine(dataPD, varDim[2])
+            # pego todas as vezes que foi chamado
+            varDimCalls = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == var[1])]
+            
+            # para cada uma delas
+            for varDim in varDimCalls.values:
 
-            # pego o token ':='
-            dataLineAtt = dataLine.loc[dataLine['token'] == 'ATRIBUICAO']
+                # encontro a linha em que ocorreu
+                dataLine = parser.searchDataLine(dataPD, varDim[2])
 
-            # se tiver uma atribuição
-            if len(dataLineAtt) > 0:
-                
-                # procuro os valores que vieram apos
-                dataLineAfterAttr = dataLine.loc[dataLine['coluna'] > dataLineAtt['coluna'].values[0]]
+                # pego o token ':='
+                dataLineAtt = dataLine.loc[dataLine['token'] == 'ATRIBUICAO']
 
-                # para cada um dos ID's
-                for attr in dataLineAfterAttr.loc[dataLineAfterAttr['token'] == 'ID'].values:
+                # se tiver uma atribuição
+                if len(dataLineAtt) > 0:
                     
-                    # vejo se o nome é o mesmo da variavel
-                    if var[1] == attr[1]:
-                        
-                        # procuro os valores apos a declaracao
-                        dataLineAttr = dataLineAfterAttr.loc[dataLineAfterAttr['coluna'] > attr[3]]
-                        
-                        # pego todos os indices
-                        dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_INTEIRO']
-                        
-                        # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                        for idx in range(len(var[5])):
+                    # procuro os valores que vieram apos
+                    dataLineAfterAttr = dataLine.loc[dataLine['coluna'] > dataLineAtt['coluna'].values[0]]
 
-                            # caso a dimensao esteja fora do intervalo
-                            if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
-                
-                # procuro os valores que vieram antes
-                dataLineBeforeAttr = dataLine.loc[dataLine['coluna'] < dataLineAtt['coluna'].values[0]]
+                    # para cada um dos ID's
+                    for attr in dataLineAfterAttr.loc[dataLineAfterAttr['token'] == 'ID'].values:
+                        
+                        # vejo se o nome é o mesmo da variavel
+                        if var[1] == attr[1]:
+                            
+                            # procuro os valores apos a declaracao
+                            dataLineAttr = dataLineAfterAttr.loc[dataLineAfterAttr['coluna'] > attr[3]]
+                            
+                            # pego todos os indices
+                            dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_INTEIRO']
+                            
+                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                            for idx in range(len(var[5])):
 
-                # para cada um dos ID's
-                for attr in dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'ID'].values:
+                                # caso a dimensao esteja fora do intervalo
+                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
                     
-                    # vejo se o nome é o mesmo da variavel
-                    if var[1] == attr[1]:
+                    # procuro os valores que vieram antes
+                    dataLineBeforeAttr = dataLine.loc[dataLine['coluna'] < dataLineAtt['coluna'].values[0]]
+
+                    # para cada um dos ID's
+                    for attr in dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'ID'].values:
                         
-                        # pego todos os indices
-                        dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_INTEIRO']
+                        # vejo se o nome é o mesmo da variavel
+                        if var[1] == attr[1]:
+                            
+                            # pego todos os indices
+                            dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_INTEIRO']
 
-                        # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                        for idx in range(len(var[5])):
+                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                            for idx in range(len(var[5])):
 
-                            # caso a dimensao esteja fora do intervalo
-                            if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                                # caso a dimensao esteja fora do intervalo
+                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
 
 def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     allID = dataPD.loc[dataPD['token'] == 'ID']
 
     for id in allID.values:
-        # if id[1] not in variablesPD['nome'].values:
-        #     errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
+
         if id[1] not in functionsPD['nome'].values:
-            if id[1] not in variablesPD['nome'].values:
+            found = False
+            for err in errors:
+                if id[1] in err[1]:
+                    found = True
+                    break
+
+            if not found and id[1] not in variablesPD['nome'].values:
                 errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
 def verifyRead(dataPD, variablesPD, errors):
@@ -143,8 +164,8 @@ def semanticAnalysis(dataPD, functionsPD, variablesPD, errors):
     verifyRead(dataPD, variablesPD, errors)
 
 def showErrors(errors):
-    
     global semanticError
+
     errosNotRepeat = []
 
     print('')

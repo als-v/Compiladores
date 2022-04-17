@@ -1,13 +1,10 @@
-inteiro: a[21]
+principal()
+    inteiro: a
+    inteiro: b
+    inteiro: result
 
-inteiro principal()
-    flutuante: b
-    inteiro: bbc
-    
-    a[22] := bbc
-    retorna(1)
-fim
+    a := 10
+    b := 11
 
-inteiro teste(inteiro: a)
-
+    result := a - b
 fim

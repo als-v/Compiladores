@@ -1,4 +1,5 @@
 import semantica as sem
+import geracaoCodigo as gc
 from sys import argv, exit
 
 def main():
@@ -31,7 +32,11 @@ def main():
     semanticError, root, dataPD, functionsPD, variablesPD = sem.execute(argv[1], detailedLogs, showTree, showTables)
 
     if not semanticError:
-        print('sem erro')
+        modulo = gc.codeGenerator(argv[1], root, dataPD, functionsPD, variablesPD)
+    
+        if showModule:
+            print('\n\n', str(modulo))
+
     else:
         print('Houve um erro nas etapas anteriores')
 

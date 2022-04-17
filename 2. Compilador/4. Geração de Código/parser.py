@@ -93,6 +93,23 @@ def searchDataLineAfterToken(data, line, token):
     # retorno os valores depois desse intervalo
     return dataLine.loc[(dataLine['coluna'] >= columnStart)]
 
+def searchDataLineAfterToken2(data, line, token):
+    # procuro os tokens da linha
+    dataLine = searchDataLine(data, line)
+
+    # pego a coluna inicial e a coluna final
+    columnStart = dataLine.loc[dataLine['token'] == token, 'coluna'].values[0] + 1
+
+    # retorno os valores depois desse intervalo
+    return dataLine.loc[(dataLine['coluna'] >= columnStart)]
+
+def checkAttr(dataLine):
+    qtdIds = len(dataLine.loc[dataLine['token'] == 'ID'])
+    qtdNumInteiro = len(dataLine.loc[dataLine['token'] == 'NUM_INTEIRO'])
+    qtdNumFlutuante = len(dataLine.loc[dataLine['token'] == 'NUM_PONTO_FLUTUANTE'])
+
+    return qtdIds + qtdNumInteiro + qtdNumFlutuante
+
 def searchDataColumn(data, line, coluna):
     # retorna todos os valores da linha
     return data.loc[(data['linha'] == line) & (data['coluna'] == coluna)]
@@ -359,7 +376,6 @@ def verifyFunctionsRepeat(dataPD, functionsPD, errors):
             # e essa recorrencia nao é da funcao principal
             if len(dataSearch.loc[dataSearch['valor'] == 'principal']) == 0:
                 errors.append(['AVISO', 'Aviso: Função “' + funcoes[1] + '” declarada, mas não utilizada'])
-
 
 def verifyFunctionsLine(dataPD, functionsPD, errors):
 
@@ -684,25 +700,24 @@ def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 # verifico na tabela de funcoes
                 functionDir = functionsPD.loc[functionsPD['nome'] == variableAssignmentDir[1]]
 
-                allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
-                idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
-                
-                qtdParams = len(idCalls)
+                if len(functionDir) > 0:
+                    allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
+                    idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
+                    
+                    qtdParams = len(idCalls)
 
-                # caso a quantidade de parametros seja maior/menor
-                if qtdParams > len(functionDir['parametros'].values[0]):
-                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros maior que o declarado'])
-                
-                elif qtdParams < len(functionDir['parametros'].values[0]):
-                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
-
+                    # caso a quantidade de parametros seja maior/menor
+                    if qtdParams > len(functionDir['parametros'].values[0]):
+                        errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros maior que o declarado'])
+                    
+                    elif qtdParams < len(functionDir['parametros'].values[0]):
+                        errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
 
 def verifyEndCallFunction(dataPD, name, line, columnInit):
     dataLine = searchDataLine(dataPD, line)
 
     initCall = dataLine.loc[dataLine['coluna'] == (columnInit + len(name))]
     columnFinal = columnInit + len(name)
-    print(columnFinal + len(initCall['valor'].values[0]))
 
     repeat = True
     repeatCount = 1
@@ -883,7 +898,6 @@ def findEscopeVariable(variablePD, lineAtribuition):
     position = len(escopeVar) - 1
     
     return escopeVar.values[position]
-
 
 def execute():
 
