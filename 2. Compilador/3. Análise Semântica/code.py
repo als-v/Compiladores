@@ -119,10 +119,15 @@ def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     allID = dataPD.loc[dataPD['token'] == 'ID']
 
     for id in allID.values:
-        # if id[1] not in variablesPD['nome'].values:
-        #     errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
+
         if id[1] not in functionsPD['nome'].values:
-            if id[1] not in variablesPD['nome'].values:
+            found = False
+            for err in errors:
+                if id[1] in err[1]:
+                    found = True
+                    break
+
+            if not found and id[1] not in variablesPD['nome'].values:
                 errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
 def verifyRead(dataPD, variablesPD, errors):

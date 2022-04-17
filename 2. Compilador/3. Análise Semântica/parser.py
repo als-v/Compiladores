@@ -684,17 +684,18 @@ def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 # verifico na tabela de funcoes
                 functionDir = functionsPD.loc[functionsPD['nome'] == variableAssignmentDir[1]]
 
-                allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
-                idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
-                
-                qtdParams = len(idCalls)
+                if len(functionDir) > 0:
+                    allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
+                    idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
+                    
+                    qtdParams = len(idCalls)
 
-                # caso a quantidade de parametros seja maior/menor
-                if qtdParams > len(functionDir['parametros'].values[0]):
-                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros maior que o declarado'])
-                
-                elif qtdParams < len(functionDir['parametros'].values[0]):
-                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
+                    # caso a quantidade de parametros seja maior/menor
+                    if qtdParams > len(functionDir['parametros'].values[0]):
+                        errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros maior que o declarado'])
+                    
+                    elif qtdParams < len(functionDir['parametros'].values[0]):
+                        errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
 
 
 def verifyEndCallFunction(dataPD, name, line, columnInit):
@@ -702,7 +703,6 @@ def verifyEndCallFunction(dataPD, name, line, columnInit):
 
     initCall = dataLine.loc[dataLine['coluna'] == (columnInit + len(name))]
     columnFinal = columnInit + len(name)
-    print(columnFinal + len(initCall['valor'].values[0]))
 
     repeat = True
     repeatCount = 1

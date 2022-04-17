@@ -39,18 +39,44 @@ nosRemove = [
     'indice',
     'chamada_funcao',
     'lista_argumentos',
+    'operador_soma',
+    'MAIS',
+    'virgula',
+    'VIRGULA',
+    ',',
+    'ESCREVA',
+    'SE',
+    'MAIOR',
+    'ENTAO',
+    'então',
+    'REPITA',
+    'ATE',
+    'IGUAL',
+    'LEIA',
+    'SENAO',
+    'senão',
 ]
 
-def noRemove(arvore):
-    pai = arvore.parent
+def remove(no):
+
+    # pego o pai do no
+    pai = no.parent
+
+    # var auxiliar
     aux = []
 
+    # para cada um dos filhos do pai
     for i in range(len(pai.children)):
-        if (pai.children[i].name == arvore.name):
-            aux += arvore.children
+
+        # se o filho for o no que quero remover
+        if (pai.children[i].name == no.name):
+            aux += no.children
+
+        # se nao, adiciono a lista auxiliar
         else:
             aux.append(pai.children[i])
 
+    # adiciono a lista auxiliar ao pai
     pai.children = aux
 
 def poda(root):
@@ -65,9 +91,9 @@ def podaAux(root):
 
     # remove o no
     if root.name in nosRemove:
-        noRemove(root)
+        remove(root)
     
     # remove caso não tenha nenhum filho
-    if root.name == 'corpo' or root.name == 'retorna':
+    if root.name == 'corpo' or root.name == 'retorna' or root.name == 'escreva' or root.name == 'se' or root.name == 'repita' or root.name == 'até' or root.name == 'leia':
         if len(root.children) == 0:
-            noRemove(root)
+            remove(root)
