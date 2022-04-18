@@ -325,10 +325,11 @@ def escreva(builder, dataPD, funcName, dataLine, line):
     loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
 
     if qtdAttr == 1:
+
         if str(loadAttr[0].type) == 'i32':
             builder.call(escrevaInteiro, [loadAttr[0]])
 
-        if str(loadAttr[0].type) == 'f32':
+        elif str(loadAttr[0].type) == 'float':
             builder.call(escrevaFlutuante, [loadAttr[0]])
 
 def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
@@ -345,23 +346,32 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
     loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
 
     if qtdAttr == 1:
+        builder.ret(loadAttr[0])
+
+def leia(builder, dataPD, funcName, dataLine, line):
+    dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+    
+    # quantidade de atributos e atributos
+    qtdAttr = p.checkAttr(dataLineAttr)
+    attr = listAttr(dataLineAttr)
+    op = listOp(dataLineAttr)
+
+    loadAttr = returnNotLoadAttr(builder, qtdAttr, attr, funcName)
+
+    if qtdAttr == 1:
         
         if attr[0][0] == 'ID':
-            if typeFunc == 'INTEIRO':
-                typeFuncLLVM = ll.IntType(32)
-            elif typeFunc == 'FLUTUANTE':
-                typeFuncLLVM = ll.FloatType()
-            
-            builder.ret(loadAttr[0])
 
-            # valueReturn = builder.alloca(typeReturnFunc, name='return')
-            # builder.store(value, valueReturn)
+            if (str(loadAttr[0].type) == 'i32*'):
+                leiaReturn = builder.call(leiaInteiro, [])
 
-            # valueReturn = builder.load(valueReturn, name='ret_temp', align=4)
-            # builder.ret(valueReturn)
+            elif str(loadAttr[0].type) == 'float*':
+                leiaReturn = builder.call(leiaFlutuante, [])
+
+            builder.store(leiaReturn, loadAttr[0], align=4)
         
-        # TODO: retorna for numero
-
+        else:
+            print('Erro na função leia: lendo um valor')
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
@@ -390,9 +400,13 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
         if len(dataLine.loc[dataLine['token'] == 'ESCREVA']) > 0:
             escreva(builder, dataPD, funcName, dataLine, line)
     
+        if len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0:
+            leia(builder, dataPD, funcName, dataLine, line)
+        
         if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
             valueReturn = True
             retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc)
+
 
     if not valueReturn:
         finalBlock = funcLLVM.append_basic_block(name='exit')
