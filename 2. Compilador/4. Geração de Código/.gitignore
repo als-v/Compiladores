@@ -8,3 +8,5 @@ log.txt
 saida.txt
 
 __pycache__/
+*.ll
+*.o

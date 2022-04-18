@@ -1,10 +1,11 @@
-principal()
-    inteiro: a
-    inteiro: b
-    inteiro: result
+flutuante principal()
+    flutuante: a
+	flutuante: b
+	
+	a := 4.1
+	b := 2.1
 
-    a := 10
-    b := 11
+    b := b + 1.0
 
-    result := a - b
+    retorna(b)
 fim

@@ -99,7 +99,7 @@ def declareFunctions(dataPD, functionsPD):
             for idx, param in enumerate(func[2]):
                 varModule.append([func[1], param[0], param[1], funcLLVM.args[idx]])
 
-        funcModule.append([func[1], funcLLVM])
+        funcModule.append([func[1], funcLLVM, func[0]])
 
         funcInit = funcLLVM.append_basic_block('entry')
         builder = ll.IRBuilder(funcInit)
@@ -159,10 +159,99 @@ def listAttr(varDir):
 
     return listAttr
 
-def atribuition(builder, function, dataLine, line):
+def listOp(varDir):
+    listOp = []
 
+    for var in varDir.values:
+
+        if var[0] == 'MENOS' or var[0] == 'MAIS' or var[0] == 'MULTIPLICACAO' or var[0] == 'DIVISAO':
+            listOp.append(var)
+
+    return listOp 
+
+def findAttr(varDir, attrLLVM, token, idx):
+    columnValue = varDir.loc[varDir['token'] == token]['coluna'].values[idx]
+    dataAfterToken = varDir.loc[varDir['coluna'] > columnValue]
+    var = dataAfterToken.values[0]
+    varName = var[1]
+    idxVar = None
+
+    if var[0] == 'ID':
+            for idx, a in enumerate(attrLLVM):
+                gambiarra = str(a).split('%"')[-1].split('"')[0]
+                
+                if varName == gambiarra:
+                    idxVar = idx
+    else:
+
+        if var[0] == 'NUM_INTEIRO':
+            intType = ll.IntType(32)
+            return intType(var[1])
+
+        elif var[0] == 'NUM_PONTO_FLUTUANTE':
+            floatType = ll.FloatType()
+            return floatType(var[1])
+    
+    if idxVar == None:
+        return None
+    
+    return attrLLVM[idxVar]
+    
+def returnLoadAttr(builder, qtdAttr, attr, function):
     intType = ll.IntType(32)
     floatType = ll.FloatType()
+    loadAttr = []
+    
+    # para cada um deles
+    for idx in range(qtdAttr):
+
+        # se for um numero flutuante
+        if attr[idx][0] == 'NUM_PONTO_FLUTUANTE':
+            loadAttr.append(floatType(float(attr[idx][1])))
+
+        # se for inteiro
+        elif attr[idx][0] == 'NUM_INTEIRO':
+            tipoAttr = returnLLVMType('inteiro')
+            loadAttr.append(intType(int(attr[idx][1])))
+
+        # se for um id
+        elif attr[idx][0] == 'ID':
+            varAttrLLVM = getLLVMVar(attr[idx][1], function)
+           
+            if None != varAttrLLVM:
+                tipoAttr = returnLLVMType(varAttrLLVM[1])
+                loadAttr.append(builder.load(varAttrLLVM[3]))
+
+    return loadAttr
+
+def returnNotLoadAttr(builder, qtdAttr, attr, function):
+    intType = ll.IntType(32)
+    floatType = ll.FloatType()
+    notLoadAttr = []
+    
+    # para cada um deles
+    for idx in range(qtdAttr):
+
+        # se for um numero flutuante
+        if attr[idx][0] == 'NUM_PONTO_FLUTUANTE':
+            notLoadAttr.append(floatType(attr[idx][1]))
+
+        # se for inteiro
+        elif attr[idx][0] == 'NUM_INTEIRO':
+            tipoAttr = returnLLVMType('inteiro')
+            notLoadAttr.append(intType(attr[idx][1]))
+
+        # se for um id
+        elif attr[idx][0] == 'ID':
+            varAttrLLVM = getLLVMVar(attr[idx][1], function)
+           
+            if None != varAttrLLVM:
+                tipoAttr = returnLLVMType(varAttrLLVM[1])
+                notLoadAttr.append(varAttrLLVM[3])
+
+    return notLoadAttr
+
+def atribuition(builder, function, dataLine, line):
 
     # variavel a esquerda da atribuicao
     varEsq = dataLine.values[0][1]
@@ -173,51 +262,117 @@ def atribuition(builder, function, dataLine, line):
 
     # quantidade de atributos e atributos
     qtdAttr = p.checkAttr(varDir)
-    attr = listAttr(varDir) 
-    loadAttr = []
+    attr = listAttr(varDir)
+    op = listOp(varDir)
 
-    # para cada um deles
-    for idx in range(qtdAttr):
+    loadAttr = returnLoadAttr(builder, qtdAttr, attr, function)
 
-        # se for um numero flutuante
-        if attr[idx][0] == 'NUM_PONTO_FLUTUANTE':
-            loadAttr.append(floatType(attr[idx][1]))
-
-        # se for inteiro
-        elif attr[idx][0] == 'NUM_INTEIRO':
-            tipoAttr = returnLLVMType('inteiro')
-            loadAttr.append(intType(attr[idx][1]))
-
-        # se for um id
-        elif attr[idx][0] == 'ID':
-            varAttrLLVM = getLLVMVar(attr[idx][1], function)
-           
-            if None != varAttrLLVM:
-                tipoAttr = returnLLVMType(varAttrLLVM[1])
-                loadAttr.append(builder.load(varAttrLLVM[3]))
-    
+    # se tiver apenas uma atribuicao
     if qtdAttr == 1:
         builder.store(loadAttr[0], varLLVMDir)
-    elif qtdAttr == 2:
-        if len(varDir.loc[varDir['token'] == 'MAIS']) > 0:
-            expressao = builder.add(loadAttr[0], loadAttr[1])
 
-        elif len(varDir.loc[varDir['token'] == 'MENOS']) > 0:
-            expressao = builder.sub(loadAttr[0], loadAttr[1])
+    # se tiver 2 atribuicoes
+    elif qtdAttr > 1:
+        if op[0][0] == 'MAIS':
+            expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
+
+        elif op[0][0] == 'MENOS':
+            expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
+
+        elif op[0][0] == 'MULTIPLICACAO':
+            expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
+
+        elif op[0][0] == 'DIVISAO':
+            expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
 
         builder.store(expressao, varLLVMDir)
+
+        canRepeat = False
+
+        if len(op) > 1:
+
+            expressao2 = None
+            idxMais = 0
+            idxMenos = 0
+            idxMul = 0
+            idxDiv = 0
+
+            for idx, operacoes in enumerate(op[1:]):
+
+                if operacoes[0] == 'MAIS':
+                    expressao = builder.add(findAttr(varDir, loadAttr, 'MAIS', idxMais), expressao, name='add_temp')
+                    idxMais += 1
+                elif operacoes[0] == 'MENOS':
+                    expressao = builder.sub(findAttr(varDir, loadAttr, 'MENOS', idxMenos), expressao, name='sub_temp')
+                    idxMenos += 1
+                elif operacoes[0] == 'MULTIPLICACAO':
+                    expressao = builder.mul(findAttr(varDir, loadAttr, 'MULTIPLICACAO', idxMul), expressao, name='mul_temp')
+                    idxMul += 1
+                elif operacoes[0] == 'DIVISAO':
+                    expressao = builder.sdiv(findAttr(varDir, loadAttr, 'DIVISAO', idxDiv), expressao, name='div_temp')
+                    idxDiv += 1
+                
+                builder.store(expressao, varLLVMDir)
+
+def escreva(builder, dataPD, funcName, dataLine, line):
+    dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
     
-    elif qtdAttr > 2:
-        print('NAO IMPLEMENTADO: atribuicao com mais de 2 atributos')
+    # quantidade de atributos e atributos
+    qtdAttr = p.checkAttr(dataLineAttr)
+    attr = listAttr(dataLineAttr)
+    op = listOp(dataLineAttr)
+
+    loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
+
+    if qtdAttr == 1:
+        if str(loadAttr[0].type) == 'i32':
+            builder.call(escrevaInteiro, [loadAttr[0]])
+
+        if str(loadAttr[0].type) == 'f32':
+            builder.call(escrevaFlutuante, [loadAttr[0]])
+
+def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
+    bloco_final = funcLLVM.append_basic_block('exit')
+    builder.branch(bloco_final)
+    builder.position_at_end(bloco_final)
+
+    dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+
+    # quantidade de atributos e atributos
+    qtdAttr = p.checkAttr(dataLineAttr)
+    attr = listAttr(dataLineAttr)
+    op = listOp(dataLineAttr)
+    loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
+
+    if qtdAttr == 1:
+        if attr[0][0] == 'ID':
+            if typeFunc == 'INTEIRO':
+                typeFuncLLVM = ll.IntType(32)
+            elif typeFunc == 'FLUTUANTE':
+                typeFuncLLVM = ll.FloatType()
+            
+            builder.ret(loadAttr[0])
+
+            # valueReturn = builder.alloca(typeReturnFunc, name='return')
+            # builder.store(value, valueReturn)
+
+            # valueReturn = builder.load(valueReturn, name='ret_temp', align=4)
+            # builder.ret(valueReturn)
+
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
     lineStart = lineStart + 1
     funcLLVM = getLLVMFunction(funcName)
+    valueReturn = False
+
+    func = getLLVMFunction(funcName)
+    funcLLVM = func[1]
+    typeFunc = func[2]
 
     for line in range(lineStart, (lineEnd + 1)):
         dataLine = p.searchDataLine(dataPD, line)
-        
+
         if len(dataLine.loc[dataLine['token'] == 'DOIS_PONTOS']) > 0:
             if len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) == 1:
                 declareVarArray(builder, funcName, dataLine)
@@ -228,6 +383,35 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
         if len(dataLine.loc[dataLine['token'] == 'ATRIBUICAO']) > 0:
             atribuition(builder, funcName, dataLine, line)
+
+        if len(dataLine.loc[dataLine['token'] == 'ESCREVA']) > 0:
+            escreva(builder, dataPD, funcName, dataLine, line)
+    
+        if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
+            valueReturn = True
+            retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc)
+
+    if not valueReturn:
+        finalBlock = funcLLVM.append_basic_block(name='exit')
+        builder.branch(finalBlock)
+
+        builder.position_at_end(finalBlock)
+        
+        if func[2] == 'VAZIO':
+            builder.ret_void()
+        else:
+            print('err')
+            # if func[2] == 'INTEIRO':
+            #     typeReturnFunc = ll.IntType(32)
+            # elif func[2] == 'FLUTUANTE':
+            #     typeReturnFunc = ll.FloatType()
+            
+            # value = ll.Constant(typeReturnFunc, 0)
+            # valueReturn = builder.alloca(typeReturnFunc, name='return')
+            # builder.store(value, valueReturn)
+
+            # valueReturn = builder.load(valueReturn, name='ret_temp', align=4)
+            # builder.ret(valueReturn)
 
 def codeGenerator(file, root, dataPD, functionsPD, variablesPD):
     
