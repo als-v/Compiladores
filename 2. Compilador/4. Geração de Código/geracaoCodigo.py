@@ -345,6 +345,7 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
     loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
 
     if qtdAttr == 1:
+        
         if attr[0][0] == 'ID':
             if typeFunc == 'INTEIRO':
                 typeFuncLLVM = ll.IntType(32)
@@ -358,6 +359,8 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
 
             # valueReturn = builder.load(valueReturn, name='ret_temp', align=4)
             # builder.ret(valueReturn)
+        
+        # TODO: retorna for numero
 
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):

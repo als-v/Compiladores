@@ -1,11 +1,12 @@
 flutuante principal()
-    flutuante: a
-	flutuante: b
+    inteiro: a
+	inteiro: b
+    flutuante: c
 	
-	a := 4.1
-	b := 2.1
+	a := 4
+	b := 2
 
-    b := b + 1.0
-
-    retorna(b)
+    b := b + 1
+    escreva(b)
+    retorna(c)
 fim
