@@ -354,24 +354,31 @@ def leia(builder, dataPD, funcName, dataLine, line):
     # quantidade de atributos e atributos
     qtdAttr = p.checkAttr(dataLineAttr)
     attr = listAttr(dataLineAttr)
-    op = listOp(dataLineAttr)
 
+    # pegar as variaveis nao inicializadas (ponteiros)
     loadAttr = returnNotLoadAttr(builder, qtdAttr, attr, funcName)
 
+    # verificacao de segurança
     if qtdAttr == 1:
         
+        # verificacao de segurança
         if attr[0][0] == 'ID':
 
+            # se for int
             if (str(loadAttr[0].type) == 'i32*'):
                 leiaReturn = builder.call(leiaInteiro, [])
 
+            # se for float
             elif str(loadAttr[0].type) == 'float*':
                 leiaReturn = builder.call(leiaFlutuante, [])
 
+            # guardar o valor lido
             builder.store(leiaReturn, loadAttr[0], align=4)
         
         else:
             print('Erro na função leia: lendo um valor')
+    else:
+        print('Erro na função leia: lendo mais de um valor')
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
