@@ -2,7 +2,7 @@
 *.ast.png
 *.ast2.png
 
-./sintatica-testes/
+geracao-codigo-testes/
 log-parser.txt
 log.txt
 saida.txt

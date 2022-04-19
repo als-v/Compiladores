@@ -48,6 +48,53 @@ def searchScope(data, line):
     # retorno todos os valores entre a linha e a linha final
     return dataLine.loc[dataLine['linha'] <= lineEndScope]
 
+def verifySeAndSenao(data, lineStart):
+    repeat = True
+    qtdFim = 0
+    line = lineStart
+    seNao = False
+
+    # enquanto poder repetir
+    while(repeat):
+
+        # pego a proxima linha
+        line += 1
+
+        # pego os dados da linha
+        dataLine = data.loc[data['linha'] == line]
+
+        # caso seja um token 'fim'
+        if len(dataLine.loc[dataLine['token'] == 'FIM']) == 1:
+
+            # verifico se o token fim e referente ao escopo
+            if qtdFim > 0:
+
+                # se nao for, apenas decremento
+                qtdFim -= 1
+
+            # caso o token fim seja referente ao escopo
+            elif qtdFim == 0:
+
+                # nao necessito repetir mais
+                repeat = False
+        
+        # caso seja um token 'se'
+        elif len(dataLine.loc[dataLine['token'] == 'SE']) == 1:
+            
+            # aumento a quantidade do token 'fim'
+            qtdFim += 1
+
+        # caso seja um token 'fim'
+        if len(dataLine.loc[dataLine['token'] == 'SENAO']) == 1:
+            if qtdFim == 0:
+                seNao = True
+
+    # pego todos os tokens FIM e vejo a linha da primeira ocorrencia
+    lineEndScope = min(dataLine.loc[dataLine['token'] == 'FIM', 'linha'].to_list())
+    
+    # retorno todos os valores entre a linha e a linha final
+    return seNao
+
 def searchLineByTwoToken(data, line, token1, token2):
     # pega todos os valores da linha
     lineData = searchDataLine(data, line)
@@ -426,7 +473,8 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
                         
                         # caso nao ache nenhuma recorrencia
                         if tamFunctionPD == 0:
-                            errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
+                            # errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
+                            pass
                         else:
 
                             # linha inicio e fim
@@ -825,7 +873,8 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                     if len(variableDir) == 0:
 
                         if isFunction(dataPD, variableAssignmentDir[2], variableAssignmentDir[1]):
-                            errors.append(['ERRO', 'Erro: Chamada a função “' + variableAssignmentDir[1] + '” que não declarada'])
+                            # errors.append(['ERRO', 'Erro: Chamada a função “' + variableAssignmentDir[1] + '” que não declarada'])
+                            pass
                         else:
                             errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
                     

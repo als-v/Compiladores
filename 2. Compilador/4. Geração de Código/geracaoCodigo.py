@@ -380,6 +380,99 @@ def leia(builder, dataPD, funcName, dataLine, line):
     else:
         print('Erro na função leia: lendo mais de um valor')
 
+def getCompare(dataLine):
+
+    if len(dataLine.loc[dataLine['token'] == 'E_LOGICO']) == 0:
+    
+        if len(dataLine.loc[dataLine['token'] == 'MAIOR']) > 0:
+            return '>', 'MAIOR'
+        
+        if len(dataLine.loc[dataLine['token'] == 'MAIOR_IGUAL']) > 0:
+            return '>=', 'MAIOR_IGUAL'
+        
+        if len(dataLine.loc[dataLine['token'] == 'MENOR']) > 0:
+            return '<', 'MENOR'
+
+        if len(dataLine.loc[dataLine['token'] == 'MENOR_IGUAL']) > 0:
+            return '<=', 'MENOR_IGUAL'
+
+        if len(dataLine.loc[dataLine['token'] == 'IGUAL']) > 0:
+            return '==', 'IGUAL'
+    else:
+        if len(dataLine.loc[dataLine['token'] == 'OU_LOGICO']) == 0:
+            # exemplo 12
+            pass
+        else:
+            # exemplo 11
+            return '&&', 'E_LOGICO'
+    
+    return ''
+
+def returnType(tipo, value):
+    tipoInteiro = ll.IntType(32)
+    tipoFlutuante = ll.FloatType()
+
+    if tipo == 'inteiro':
+        return tipoInteiro(value)
+    elif tipo == 'flutuante':
+        return tipoFlutuante(value)
+
+def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTrue, seFalse, seEnd):
+    
+    # pego a comparacao
+    comparacao, token = getCompare(dataLine)
+    
+    # quantidade de atributos e atributos
+    dataSeEsq = p.searchLineByTwoToken(dataPD, line, 'SE', token)
+    qtdAttrEsq = p.checkAttr(dataSeEsq)
+    attrEsq = listAttr(dataSeEsq)
+    
+    # pegar as variaveis inicializadas
+    loadAttrEsq = returnLoadAttr(builder, qtdAttrEsq, attrEsq, funcName)
+
+    # quantidade de atributos e atributos
+    dataSeDir = p.searchLineByTwoToken(dataPD, line, token, 'ENTAO')
+    qtdAttrDir = p.checkAttr(dataSeDir)
+    attrDir = listAttr(dataSeDir)
+
+    # pegar as variaveis inicializadas
+    loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
+
+    # crio a comparacao
+    comperRight = builder.alloca(ll.IntType(32), name='var_comp_r')
+    comperLeft = builder.alloca(ll.IntType(32), name='var_comp_l')
+
+    # verifico se possuo apenas 1 variavel para verificar
+    if qtdAttrEsq == 1 and qtdAttrDir == 1:
+
+        # carrego os valores para ambos os lados da comparacao
+        for attrEsq in loadAttrEsq:
+            builder.store(attrEsq, comperLeft, align=4)
+
+        for attrDir in loadAttrDir:
+            builder.store(attrDir, comperRight, align=4)
+
+    else:
+        # exemplo 11
+        pass
+    
+    # crio o bloco do if
+    ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
+    
+    # se for um se sem o senão
+    if seFalse == None:
+
+        # crio a condicao, onde se for falso, nao executa o bloco e pula direto para o bloco fim
+        builder.cbranch(ifState, seTrue, seEnd)
+
+    else:
+        # crio a condicao, onde se for falso, pula direto para o bloco falso
+        builder.cbranch(ifState, seTrue, seFalse)
+
+    # o escopo agora e do bloco 'verdade'
+    builder.position_at_end(seTrue)
+
+
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
     lineStart = lineStart + 1
@@ -389,6 +482,9 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
     func = getLLVMFunction(funcName)
     funcLLVM = func[1]
     typeFunc = func[2]
+
+    seRepitaBlock = []
+    idxBlock = 0
 
     for line in range(lineStart, (lineEnd + 1)):
         dataLine = p.searchDataLine(dataPD, line)
@@ -410,6 +506,68 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
         if len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0:
             leia(builder, dataPD, funcName, dataLine, line)
         
+        if len(dataLine.loc[dataLine['token'] == 'SE']) > 0:
+            
+            # verifico se possui um senao
+            senao = p.verifySeAndSenao(dataPD, line)
+
+            # se possuir o senao
+            if senao:
+
+                # crio os blocos: verdade, falso e fim
+                seTrue = funcLLVM.append_basic_block('if_true')
+                seFalse = funcLLVM.append_basic_block('if_false')
+                seEnd = funcLLVM.append_basic_block('if_end')
+
+                # adiciono na lista: [TIPO, se possui senao, se ja executou o senao, bloco verdade, bloco falso, bloco fim]
+                seRepitaBlock.append(['SE', senao, False, seTrue, seFalse, seEnd])
+
+                # chamo a funcao
+                se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTrue, seFalse, seEnd)
+                idxBlock += 1
+
+            else:
+
+                # caso nao possui senao, entao crio apenas os blocos: verdade e fim
+                seTrue = funcLLVM.append_basic_block('if_true')
+                seEnd = funcLLVM.append_basic_block('if_end')
+                
+                # adiciono na lista: [TIPO, se possui senao, se ja executou o senao, bloco verdade, bloco falso, bloco fim]
+                seRepitaBlock.append(['SE', senao, False, seTrue, None, seEnd])
+                
+                # chamo a funcao
+                se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTrue, None, seEnd)
+                idxBlock += 1
+        
+        # caso seja um senao
+        if len(dataLine.loc[dataLine['token'] == 'SENAO']) > 0:
+
+            # precaucao para nao dar erro
+            if len(seRepitaBlock) > 0:
+                
+                # pego o ultimo bloco criado
+                block = seRepitaBlock.pop()
+
+                # seto a flag para indicar que estou no senao
+                block[2] = True
+                seRepitaBlock.append(block)
+
+                # vai para o if end
+                builder.branch(block[5])
+
+                # continua no senao
+                builder.position_at_end(block[4])
+
+        if len(dataLine.loc[dataLine['token'] == 'FIM']) > 0:
+            if len(seRepitaBlock) > 0:
+                
+                # pego o bloco
+                block = seRepitaBlock.pop()
+
+                # vai para o fim
+                builder.branch(block[5])
+                builder.position_at_end(block[5])
+
         if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
             valueReturn = True
             retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc)
@@ -417,6 +575,7 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
     if not valueReturn:
         finalBlock = funcLLVM.append_basic_block(name='exit')
+        print(str(modulo))
         builder.branch(finalBlock)
 
         builder.position_at_end(finalBlock)

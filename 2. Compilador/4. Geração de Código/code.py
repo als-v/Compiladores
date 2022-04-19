@@ -6,7 +6,7 @@ import geracaoCodigo as gc
 def main():
 
     # flags
-    detailedLogs, showTree, showTables, showModule = False, False, False, False
+    detailedLogs, showTree, showTables, showModule, autoRun = False, False, False, False, False
 
     # pegar nome do arquivo
     try:
@@ -29,6 +29,8 @@ def main():
         showTables = True
     if 'sm' in argv:
         showModule = True
+    if 'ar' in argv:
+        autoRun = True
 
     semanticError, root, dataPD, functionsPD, variablesPD = sem.execute(argv[1], detailedLogs, showTree, showTables)
 
@@ -45,7 +47,8 @@ def main():
         arquivo.write(str(modulo))
         arquivo.close()
 
-        run(argv[1])
+        if autoRun:
+            run(argv[1])
 
     else:
         print('Houve um erro nas etapas anteriores')
