@@ -439,8 +439,8 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
     loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
 
     # crio a comparacao
-    comperRight = builder.alloca(ll.IntType(32), name='var_comp_r')
-    comperLeft = builder.alloca(ll.IntType(32), name='var_comp_l')
+    comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
+    comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
 
     # verifico se possuo apenas 1 variavel para verificar
     if qtdAttrEsq == 1 and qtdAttrDir == 1:
@@ -471,6 +471,53 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
 
     # o escopo agora e do bloco 'verdade'
     builder.position_at_end(seTrue)
+
+def repita(builder, dataPD, dataLine, line, funcName, loop, loopEnd):
+    
+    # pego a comparacao
+    comparacao, token = getCompare(dataLine)
+
+    # quantidade de atributos e atributos
+    dataRepitaEsq = p.searchLineByTwoToken(dataPD, line, 'ATE', token)
+    qtdAttrEsq = p.checkAttr(dataRepitaEsq)
+    attrEsq = listAttr(dataRepitaEsq)
+
+    # pegar as variaveis inicializadas
+    loadAttrEsq = returnLoadAttr(builder, qtdAttrEsq, attrEsq, funcName)
+
+    # quantidade de atributos e atributos
+    dataRepitaDir = p.searchDataLineAfterToken2(dataPD, line, token)
+    qtdAttrDir = p.checkAttr(dataRepitaDir)
+    attrDir = listAttr(dataRepitaDir)
+
+    # pegar as variaveis inicializadas
+    loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
+
+    # crio a comparacao
+    comperRight = builder.alloca(ll.IntType(32), name='var_comp_loop_r')
+    comperLeft = builder.alloca(ll.IntType(32), name='var_comp_loop_l')
+
+    # verifico se possuo apenas 1 variavel para verificar
+    if qtdAttrEsq == 1 and qtdAttrDir == 1:
+
+        # carrego os valores para ambos os lados da comparacao
+        for attrEsq in loadAttrEsq:
+            builder.store(attrEsq, comperLeft, align=4)
+
+        for attrDir in loadAttrDir:
+            builder.store(attrDir, comperRight, align=4)
+
+    # crio o bloco do if
+    loopState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='loop_state')
+
+    # caso seja uma comparacao (se nao fizer isso, sempre que o valor nao seja igual ao esperado ele sai do loop)
+    if comparacao == '==':
+        builder.cbranch(loopState, loopEnd, loop)
+    
+    else:
+        builder.cbranch(loopState, loop, loopEnd)
+
+    builder.position_at_end(loopEnd)
 
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
@@ -545,6 +592,8 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
             # precaucao para nao dar erro
             if len(seRepitaBlock) > 0:
                 
+                blockCompare = seRepitaBlock[-1]
+
                 # pego o ultimo bloco criado
                 block = seRepitaBlock.pop()
 
@@ -557,6 +606,29 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
                 # continua no senao
                 builder.position_at_end(block[4])
+
+        if len(dataLine.loc[dataLine['token'] == 'REPITA']) > 0:
+            loop = builder.append_basic_block('loop')
+            loppVal = builder.append_basic_block('loop_val')
+            loopEnd = builder.append_basic_block('loop_end')
+
+            seRepitaBlock.append(['REPITA', False, False, loop, loppVal, loopEnd])
+
+            builder.branch(loop)
+            builder.position_at_end(loop)
+
+        if len(dataLine.loc[dataLine['token'] == 'ATE']) > 0:
+            
+            block = seRepitaBlock[-1]
+
+            if block[0] == 'REPITA':
+
+                # pego o bloco
+                block = seRepitaBlock.pop()
+                builder.branch(block[4])
+                builder.position_at_end(block[4])
+
+                repita(builder, dataPD, dataLine, line, funcName, block[3], block[5])
 
         if len(dataLine.loc[dataLine['token'] == 'FIM']) > 0:
             if len(seRepitaBlock) > 0:
@@ -575,7 +647,6 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
 
     if not valueReturn:
         finalBlock = funcLLVM.append_basic_block(name='exit')
-        print(str(modulo))
         builder.branch(finalBlock)
 
         builder.position_at_end(finalBlock)

@@ -1,18 +1,20 @@
 {Condicional}
-inteiro: a
+inteiro: idx
 
 principal()
-    leia(a)
+    inteiro: a
+    idx := 0
 
-	se a = 5 então
+	repita
         leia(a)
 
-        se a = 6 então
+        se a > 0 então
             escreva(100)
         senão
-            escreva(99)
+            escreva(1)
         fim
-    fim
 
-    escreva(a)
+        idx := idx + 1
+    até idx < 10
+
 fim
