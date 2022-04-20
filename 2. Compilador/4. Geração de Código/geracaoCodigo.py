@@ -288,7 +288,6 @@ def atribuition(builder, function, dataLine, line, functionsPD):
     # se tiver 2 atribuicoes
     elif qtdAttr > 1:
         
-        print('oia so: ', loadAttr[0])
         if 'FUNCAO' not in str(loadAttr[0]):
 
             if op[0][0] == 'MAIS':
