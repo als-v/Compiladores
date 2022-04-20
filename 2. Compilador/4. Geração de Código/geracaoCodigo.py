@@ -104,7 +104,7 @@ def declareFunctions(dataPD, functionsPD):
         funcInit = funcLLVM.append_basic_block('entry')
         builder = ll.IRBuilder(funcInit)
 
-        declareAll(builder, dataPD, func[1], func[3], func[4])
+        declareAll(builder, dataPD, func[1], func[3], func[4], functionsPD)
 
 def getLLVMFunction(funcName):
     for func in funcModule:
@@ -220,7 +220,13 @@ def returnLoadAttr(builder, qtdAttr, attr, function):
            
             if None != varAttrLLVM:
                 tipoAttr = returnLLVMType(varAttrLLVM[1])
-                loadAttr.append(builder.load(varAttrLLVM[3]))
+
+                if 'alloca' in str(varAttrLLVM[3]):
+                    loadAttr.append(builder.load(varAttrLLVM[3]))
+                else:
+                    loadAttr.append(varAttrLLVM[3])
+            else:
+                loadAttr.append('FUNCAO;;' + str(attr[idx][1]))
 
     return loadAttr
 
@@ -251,7 +257,7 @@ def returnNotLoadAttr(builder, qtdAttr, attr, function):
 
     return notLoadAttr
 
-def atribuition(builder, function, dataLine, line):
+def atribuition(builder, function, dataLine, line, functionsPD):
 
     # variavel a esquerda da atribuicao
     varEsq = dataLine.values[0][1]
@@ -269,50 +275,93 @@ def atribuition(builder, function, dataLine, line):
 
     # se tiver apenas uma atribuicao
     if qtdAttr == 1:
-        builder.store(loadAttr[0], varLLVMDir)
+
+        if 'FUNCAO' not in loadAttr[0]:
+            builder.store(loadAttr[0], varLLVMDir)
+        
+        else:
+            functionLLVM = getLLVMFunction(attr[0][1])[1]
+            chamadaFuncao = builder.call(functionLLVM, [])
+
+            builder.store(chamadaFuncao, varLLVMDir)
 
     # se tiver 2 atribuicoes
     elif qtdAttr > 1:
-        if op[0][0] == 'MAIS':
-            expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
+        
+        print('oia so: ', loadAttr[0])
+        if 'FUNCAO' not in str(loadAttr[0]):
 
-        elif op[0][0] == 'MENOS':
-            expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
+            if op[0][0] == 'MAIS':
+                expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
 
-        elif op[0][0] == 'MULTIPLICACAO':
-            expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
+            elif op[0][0] == 'MENOS':
+                expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
 
-        elif op[0][0] == 'DIVISAO':
-            expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
+            elif op[0][0] == 'MULTIPLICACAO':
+                expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
 
-        builder.store(expressao, varLLVMDir)
+            elif op[0][0] == 'DIVISAO':
+                expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
 
-        canRepeat = False
+            builder.store(expressao, varLLVMDir)
 
-        if len(op) > 1:
+            canRepeat = False
 
-            expressao2 = None
-            idxMais = 0
-            idxMenos = 0
-            idxMul = 0
-            idxDiv = 0
+            if len(op) > 1:
 
-            for idx, operacoes in enumerate(op[1:]):
+                expressao2 = None
+                idxMais = 0
+                idxMenos = 0
+                idxMul = 0
+                idxDiv = 0
 
-                if operacoes[0] == 'MAIS':
-                    expressao = builder.add(findAttr(varDir, loadAttr, 'MAIS', idxMais), expressao, name='add_temp')
-                    idxMais += 1
-                elif operacoes[0] == 'MENOS':
-                    expressao = builder.sub(findAttr(varDir, loadAttr, 'MENOS', idxMenos), expressao, name='sub_temp')
-                    idxMenos += 1
-                elif operacoes[0] == 'MULTIPLICACAO':
-                    expressao = builder.mul(findAttr(varDir, loadAttr, 'MULTIPLICACAO', idxMul), expressao, name='mul_temp')
-                    idxMul += 1
-                elif operacoes[0] == 'DIVISAO':
-                    expressao = builder.sdiv(findAttr(varDir, loadAttr, 'DIVISAO', idxDiv), expressao, name='div_temp')
-                    idxDiv += 1
+                for idx, operacoes in enumerate(op[1:]):
+
+                    if operacoes[0] == 'MAIS':
+                        expressao = builder.add(findAttr(varDir, loadAttr, 'MAIS', idxMais), expressao, name='add_temp')
+                        idxMais += 1
+                    elif operacoes[0] == 'MENOS':
+                        expressao = builder.sub(findAttr(varDir, loadAttr, 'MENOS', idxMenos), expressao, name='sub_temp')
+                        idxMenos += 1
+                    elif operacoes[0] == 'MULTIPLICACAO':
+                        expressao = builder.mul(findAttr(varDir, loadAttr, 'MULTIPLICACAO', idxMul), expressao, name='mul_temp')
+                        idxMul += 1
+                    elif operacoes[0] == 'DIVISAO':
+                        expressao = builder.sdiv(findAttr(varDir, loadAttr, 'DIVISAO', idxDiv), expressao, name='div_temp')
+                        idxDiv += 1
+                    
+                    builder.store(expressao, varLLVMDir)
+        
+        else:
+
+            funcName = attr[0][1].split(';;')[0]
+            functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+
+            if len(functionPD) > 0:
+                funcPD = functionsPD.values[0]
+
+                haveParams = False
+                attrIdx = 0
+
+                if len(funcPD[2]) > 0:
+                    haveParams = True
+
+                funcParams = []
+
+                while(haveParams):
+                    attrIdx += 1
+
+                    funcParams.append(loadAttr[attrIdx])
+
+                    if attrIdx == len(funcPD[2]):
+                        haveParams = False
                 
-                builder.store(expressao, varLLVMDir)
+                print('params: ', funcParams)
+
+                print(getLLVMFunction(funcName))
+
+                chamadaFuncao = builder.call(getLLVMFunction(funcName)[1], funcParams)
+                builder.store(chamadaFuncao, varLLVMDir)
 
 def escreva(builder, dataPD, funcName, dataLine, line):
     dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
@@ -520,7 +569,7 @@ def repita(builder, dataPD, dataLine, line, funcName, loop, loopEnd):
     builder.position_at_end(loopEnd)
 
 
-def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
+def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
     lineStart = lineStart + 1
     funcLLVM = getLLVMFunction(funcName)
@@ -545,7 +594,7 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd):
                 declareVarEscope(builder, funcName, dataLine)
 
         if len(dataLine.loc[dataLine['token'] == 'ATRIBUICAO']) > 0:
-            atribuition(builder, funcName, dataLine, line)
+            atribuition(builder, funcName, dataLine, line, functionsPD)
 
         if len(dataLine.loc[dataLine['token'] == 'ESCREVA']) > 0:
             escreva(builder, dataPD, funcName, dataLine, line)

@@ -1,20 +1,16 @@
 {Condicional}
 inteiro: idx
 
+inteiro doubleValue(inteiro: numero)
+inteiro: resultado
+resultado := numero * 2
+retorna(numero)
+fim
+
 principal()
     inteiro: a
-    idx := 0
 
-	repita
-        leia(a)
+    a := doubleValue(10)
 
-        se a > 0 então
-            escreva(100)
-        senão
-            escreva(1)
-        fim
-
-        idx := idx + 1
-    até idx < 10
-
+    escreva(a)
 fim
