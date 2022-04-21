@@ -89,12 +89,14 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
                             # pego todos os indices
                             dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_INTEIRO']
                             
-                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                            for idx in range(len(var[5])):
+                            if len(dimensionsAttr) > 0:
+                                
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
 
-                                # caso a dimensao esteja fora do intervalo
-                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                                    # caso a dimensao esteja fora do intervalo
+                                    if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
                     
                     # procuro os valores que vieram antes
                     dataLineBeforeAttr = dataLine.loc[dataLine['coluna'] < dataLineAtt['coluna'].values[0]]
@@ -108,12 +110,15 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
                             # pego todos os indices
                             dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_INTEIRO']
 
-                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                            for idx in range(len(var[5])):
+                            if len(dimensionsAttr) > 0:
 
-                                # caso a dimensao esteja fora do intervalo
-                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
+                                    
+                                    print(dimensionsAttr.values[idx])
+                                    # caso a dimensao esteja fora do intervalo
+                                    if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
 
 def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     allID = dataPD.loc[dataPD['token'] == 'ID']

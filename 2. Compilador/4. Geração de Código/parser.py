@@ -299,17 +299,20 @@ def getFunctions(dataPD):
 
                                     # se vier algo, e não for: ':', ',', '[' e ']'
                                     if ((len(dataColumn) > 0) and (len(dataColumn.loc[dataColumn['token'] == 'DOIS_PONTOS']) < 1) and (len(dataColumn.loc[dataColumn['token'] == 'VIRGULA']) < 1) and (len(dataColumn.loc[dataColumn['token'] == 'ABRE_COLCHETE']) < 1) and (len(dataColumn.loc[dataColumn['token'] == 'FECHA_COLCHETE']) < 1)):
+                                    # if ((len(dataColumn) > 0) and (len(dataColumn.loc[dataColumn['token'] == 'ID']) > 0)):
                                         dataColumnList.append(dataColumn.values[0])
 
                                     # caso encontre 2 valores (TIPO e ID)
-                                    if len(dataColumnList) == 2:
-                                        functionArgs.append([])
+                                    if len(dataColumnList) > 0:
 
                                         for argsInfo in dataColumnList:
-                                            functionArgs[paramIdx].append(argsInfo[1])
-
+                                            if argsInfo[0] != 'ID':
+                                                tipoArgs = argsInfo[0]
+                                            else:
+                                                functionArgs.append([tipoArgs.lower(), argsInfo[1]])
+                                                paramIdx += 1
+                                        
                                         dataColumnList = []
-                                        paramIdx += 1
 
                             # nome da funcao
                             functionName = function['valor'].values[0]
@@ -487,10 +490,12 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
 
                             # caso a quantidade de parametros seja maior/menor
                             if qtdParams > len(functionPD['parametros'].values[0]):
-                                errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros maior que o declarado'])
-                            
+                                # errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros maior que o declarado'])
+                                pass
+                                
                             elif qtdParams < len(functionPD['parametros'].values[0]):
-                                errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
+                                # errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
+                                pass
 
 def verifyVariables(dataPD, functionsPD, variablesPD, errors):
     verifyVariableUse(dataPD, variablesPD, errors)
@@ -634,9 +639,11 @@ def getVariables(dataPD, functions, errors):
 
                     # o escopo da variavel
                     escope = findEscope(line, functions)
-
-                    if(findVariable(variables, variableName, escope)):
-                        errors.append(['AVISO', 'Aviso: Variável “' + variableName + '” já declarada anteriormente'])
+                    
+                    for variableName in dataLineIDs['valor'].values:
+                    
+                        if(findVariable(variables, variableName, escope)):
+                            errors.append(['AVISO', 'Aviso: Variável “' + variableName + '” já declarada anteriormente'])
 
                     # para cada variavel
                     for declaration in dataLineIDs.values:
@@ -742,6 +749,8 @@ def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
             # pego todos os IDS
             dataDir = assignmentDir.loc[assignmentDir['token'] == 'ID']
 
+            qtdFunc = 0
+
             # para cada um deles
             for variableAssignmentDir in dataDir.values:
 
@@ -749,6 +758,11 @@ def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 functionDir = functionsPD.loc[functionsPD['nome'] == variableAssignmentDir[1]]
 
                 if len(functionDir) > 0:
+                    qtdFunc += 1
+
+                    if qtdFunc > 1:
+                        break
+
                     allFunctionCalls = verifyEndCallFunction(dataPD, functionDir['nome'].values[0], dataDir['linha'].values[0], dataDir['coluna'].values[0])
                     idCalls = allFunctionCalls.loc[(allFunctionCalls['token'] == 'ID') | (allFunctionCalls['token'] == 'NUM_INTEIRO') | (allFunctionCalls['token'] == 'NUM_PONTO_FLUTUANTE')]
                     
@@ -760,6 +774,9 @@ def verifyFunctionAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                     
                     elif qtdParams < len(functionDir['parametros'].values[0]):
                         errors.append(['ERRO', 'Erro: Chamada à função “' + functionDir['nome'].values[0] + '” com número de parâmetros menor que o declarado'])
+
+            if qtdFunc > 1:
+                errors.pop()
 
 def verifyEndCallFunction(dataPD, name, line, columnInit):
     dataLine = searchDataLine(dataPD, line)

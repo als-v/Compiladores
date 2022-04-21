@@ -45,7 +45,10 @@ def declareVarGlobal(variablesPD):
 
             # se for um arranjo
             if len(var[5]) > 0:
-                tipoLLVM = ll.ArrayType(tipoLLVM, len(var[5]))
+                tipoLLVM = ll.ArrayType(tipoLLVM, int(var[5][0]))
+                indices = int(var[5][0])
+            else:
+                indices = 0
 
             # crio a variavel
             varLLVM = ll.GlobalVariable(modulo, tipoLLVM, var[1])
@@ -67,7 +70,7 @@ def declareVarGlobal(variablesPD):
             varLLVM.align = 4
             
             # salvo a variavel
-            varModule.append(['global', var[0], var[1], varLLVM])
+            varModule.append(['global', var[0], var[1], varLLVM, indices])
 
 def declareFunctions(dataPD, functionsPD):
 
@@ -97,7 +100,7 @@ def declareFunctions(dataPD, functionsPD):
         if len(func[2]) > 0:
 
             for idx, param in enumerate(func[2]):
-                varModule.append([func[1], param[0], param[1], funcLLVM.args[idx]])
+                varModule.append([func[1], param[0], param[1], funcLLVM.args[idx], 0])
 
         funcModule.append([func[1], funcLLVM, func[0]])
 
@@ -131,20 +134,60 @@ def getLLVMVar(varName, function):
 def declareVarEscope(builder, functionName, dataLine):
     typeVar = dataLine.values[0][0]
     typeLLVM = returnLLVMType(typeVar)
-    nameVar = dataLine.values[2][1]
+    idsLine = dataLine.loc[dataLine['token'] == 'ID']
 
-    varFunction = builder.alloca(typeLLVM, name=nameVar)
+    for nameVar in idsLine['valor'].values:
+
+        varFunction = builder.alloca(typeLLVM, name=nameVar)
+        
+        if typeVar.lower() == 'inteiro':
+            varFunction.initializer = ll.Constant(typeLLVM, 0)
+        else:
+            varFunction.initializer = ll.Constant(typeLLVM, 0.0)
+
+        varFunction.align = 4
+        varModule.append([functionName, typeVar, nameVar, varFunction, 0])
+
+def returnValueArray(dataLine):
+    dataLineIDS = dataLine.loc[dataLine['token'] == 'ID']
+    dataResult = []
     
-    if typeVar.lower() == 'inteiro':
-        varFunction.initializer = ll.Constant(typeLLVM, 0)
-    else:
-        varFunction.initializer = ll.Constant(typeLLVM, 0.0)
+    for dataIds in dataLineIDS.values:
+        nextValue = dataLine.loc[dataLine['coluna'] == dataIds[3] + 1, 'token']
 
-    varFunction.align = 4
-    varModule.append([functionName, typeVar, nameVar, varFunction])
+        if len(nextValue) > 0:
+            if nextValue.values[0] == 'ABRE_COLCHETE':
+                tamArray = dataLine.loc[dataLine['coluna'] == dataIds[3] + 2, 'valor'].values[0]
+                dataResult.append([dataIds[1], int(tamArray)])
+            else:
+                dataResult.append([dataIds[1], 0])
+        else:
+            dataResult.append([dataIds[1], 0])
+
+    return dataResult
 
 def declareVarArray(builder, functionName, dataLine):
-    print('NAO IMPLEMENTADO: declaracao array')
+    typeVar = dataLine.values[0][0]
+    typeLLVM = returnLLVMType(typeVar)
+    idsLine = dataLine.loc[dataLine['token'] == 'ID']
+    allIds = returnValueArray(dataLine)
+
+    for var in allIds:
+
+        if var[1] > 0:
+            varFunction = builder.alloca(ll.ArrayType(typeLLVM, var[1]), name=var[0])
+            varFunction.initializer = ll.Constant(typeLLVM, None)
+        else:
+
+            varFunction = builder.alloca(typeLLVM, name=var[0])
+            
+            if typeVar.lower() == 'inteiro':
+                varFunction.initializer = ll.Constant(typeLLVM, 0)
+            else:
+                varFunction.initializer = ll.Constant(typeLLVM, 0.0)
+
+        varFunction.align = 4
+        varModule.append([functionName, typeVar, var[0], varFunction, var[1]])
 
 def declareVarMatrix(builder, functionName, dataLine):
     print('NAO IMPLEMENTADO: declaracao matrix')
@@ -256,14 +299,56 @@ def returnNotLoadAttr(builder, qtdAttr, attr, function):
 
     return notLoadAttr
 
+def isArray(variable):
+    for var in varModule:
+        if var[2] == variable:
+
+            if var[4] > 0:
+                return True
+            else:
+                return False
+
+    return False
+
 def atribuition(builder, function, dataLine, line, functionsPD):
+
+    tipoInt = ll.IntType(32)
 
     # variavel a esquerda da atribuicao
     varEsq = dataLine.values[0][1]
 
     # variaveis a direita da atribuicao
     varDir = p.searchDataLineAfterToken2(dataLine, line, 'ATRIBUICAO')
-    varLLVMDir = getLLVMVar(varEsq, function)[3]
+
+    if isArray(varEsq):
+        var = getLLVMVar(varEsq, function)[3]
+
+        exp = False
+        expBefore = False
+
+        if dataLine.values[2][0] != 'ID':
+            indice = int(dataLine.values[2][1])
+        else:
+            expBefore = True
+            indice = builder.load(getLLVMVar(dataLine.values[2][1], function)[3])
+
+        if (dataLine.values[4][0] == 'ID' or dataLine.values[4][0] == 'NUM_INTEIRO' or dataLine.values[4][0] == 'NUM_PONTO_FLUTUANTE'):
+            exp = True
+            op = dataLine.values[3][0]
+            varOp = getLLVMVar(dataLine.values[4][1], function)[3]
+
+            if op == 'MENOS':
+                expressao = builder.sub(tipoInt(indice), builder.load(varOp), name='sub_temp')
+
+        if exp:
+            varLLVMDir = builder.gep(var, [tipoInt(0), expressao], name='ptr_A_'+varEsq)
+        else:
+            if expBefore:
+                varLLVMDir = builder.gep(var, [tipoInt(0), indice], name='ptr_A_'+varEsq)
+            else:
+                varLLVMDir = builder.gep(var, [tipoInt(0), tipoInt(indice)], name='ptr_A_'+varEsq)
+    else:
+        varLLVMDir = getLLVMVar(varEsq, function)[3]
 
     # quantidade de atributos e atributos
     qtdAttr = p.checkAttr(varDir)
@@ -286,82 +371,158 @@ def atribuition(builder, function, dataLine, line, functionsPD):
 
     # se tiver 2 atribuicoes
     elif qtdAttr > 1:
-        
-        if 'FUNCAO' not in str(loadAttr[0]):
 
-            if op[0][0] == 'MAIS':
-                expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
+        if not isArray(attr[0][1]):
+            if 'FUNCAO' not in str(loadAttr[0]):
 
-            elif op[0][0] == 'MENOS':
-                expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
+                if op[0][0] == 'MAIS':
+                    expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
 
-            elif op[0][0] == 'MULTIPLICACAO':
-                expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
+                elif op[0][0] == 'MENOS':
+                    expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
 
-            elif op[0][0] == 'DIVISAO':
-                expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
+                elif op[0][0] == 'MULTIPLICACAO':
+                    expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
 
-            builder.store(expressao, varLLVMDir)
+                elif op[0][0] == 'DIVISAO':
+                    expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
 
-            canRepeat = False
+                builder.store(expressao, varLLVMDir)
 
-            if len(op) > 1:
+                canRepeat = False
 
-                expressao2 = None
-                idxMais = 0
-                idxMenos = 0
-                idxMul = 0
-                idxDiv = 0
+                if len(op) > 1:
 
-                for idx, operacoes in enumerate(op[1:]):
+                    expressao2 = None
+                    idxMais = 0
+                    idxMenos = 0
+                    idxMul = 0
+                    idxDiv = 0
 
-                    if operacoes[0] == 'MAIS':
-                        expressao = builder.add(findAttr(varDir, loadAttr, 'MAIS', idxMais), expressao, name='add_temp')
-                        idxMais += 1
-                    elif operacoes[0] == 'MENOS':
-                        expressao = builder.sub(findAttr(varDir, loadAttr, 'MENOS', idxMenos), expressao, name='sub_temp')
-                        idxMenos += 1
-                    elif operacoes[0] == 'MULTIPLICACAO':
-                        expressao = builder.mul(findAttr(varDir, loadAttr, 'MULTIPLICACAO', idxMul), expressao, name='mul_temp')
-                        idxMul += 1
-                    elif operacoes[0] == 'DIVISAO':
-                        expressao = builder.sdiv(findAttr(varDir, loadAttr, 'DIVISAO', idxDiv), expressao, name='div_temp')
-                        idxDiv += 1
+                    for idx, operacoes in enumerate(op[1:]):
+
+                        if operacoes[0] == 'MAIS':
+                            expressao = builder.add(findAttr(varDir, loadAttr, 'MAIS', idxMais), expressao, name='add_temp')
+                            idxMais += 1
+                        elif operacoes[0] == 'MENOS':
+                            expressao = builder.sub(findAttr(varDir, loadAttr, 'MENOS', idxMenos), expressao, name='sub_temp')
+                            idxMenos += 1
+                        elif operacoes[0] == 'MULTIPLICACAO':
+                            expressao = builder.mul(findAttr(varDir, loadAttr, 'MULTIPLICACAO', idxMul), expressao, name='mul_temp')
+                            idxMul += 1
+                        elif operacoes[0] == 'DIVISAO':
+                            expressao = builder.sdiv(findAttr(varDir, loadAttr, 'DIVISAO', idxDiv), expressao, name='div_temp')
+                            idxDiv += 1
+                        
+                        builder.store(expressao, varLLVMDir)
+            
+            else:
+                
+                indexGeral = 0
+                function = []
+                result = []
+
+                while(indexGeral < len(loadAttr)):
                     
-                    builder.store(expressao, varLLVMDir)
-        
+                    if 'FUNCAO' in str(loadAttr[indexGeral]):
+                        
+                        funcName = loadAttr[indexGeral].split(';;')[1]
+                        functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+
+                        function.append([len(functionPD.values[0][2]), getLLVMFunction(funcName), [], functionPD.values[0][0]])
+
+                    else:
+                        
+                        isParam = function[-1]
+
+                        if isParam[0] > 0:
+                            function[-1][0] -= 1
+                            function[-1][2].append(loadAttr[indexGeral])
+
+                        if function[-1][0] == 0:
+                            functionAtual = function.pop()
+
+                            chamadaFuncao = builder.call(functionAtual[1][1], functionAtual[2])
+                            result.append(chamadaFuncao)
+
+                    indexGeral += 1
+
+                if len(function) > 0:
+                    
+                    if function[-1][0] == len(result):
+                        functionAtual = function.pop()
+
+                        chamadaFuncao = builder.call(functionAtual[1][1], result)
+                        builder.store(chamadaFuncao, varLLVMDir)
+                
+                elif len(result) > 0:
+                    builder.store(result[0], varLLVMDir)
+
         else:
 
-            funcName = attr[0][1].split(';;')[0]
-            functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+            arrayVar = attr[0][1]
 
-            if len(functionPD) > 0:
-                funcPD = functionsPD.values[0]
+            if isArray(arrayVar):
 
-                haveParams = False
-                attrIdx = 0
+                if len(attr) == 2:
+                    
+                    isId = False
 
-                if len(funcPD[2]) > 0:
-                    haveParams = True
+                    if attr[1][0] != 'ID':
+                        indice = int(attr[1][1])
+                    else:
+                        isId = True
+                        indice = loadAttr[1]
 
-                funcParams = []
+                    if isId:
+                        posicaoArray = builder.gep(loadAttr[0], [tipoInt(0), indice], name='ptr_A_'+str(attr[1][1]))
 
-                while(haveParams):
-                    attrIdx += 1
+                    else:
+                        posicaoArray = builder.gep(loadAttr[0], [tipoInt(0), tipoInt(indice)], name='ptr_A_'+str(attr[1][1]))
+                    
+                    builder.store(builder.load(posicaoArray), varLLVMDir)
 
-                    funcParams.append(loadAttr[attrIdx])
+                elif len(attr) == 4:
 
-                    if attrIdx == len(funcPD[2]):
-                        haveParams = False
-                
-                print('params: ', funcParams)
+                    isId1 = False
+                    isId2 = False
 
-                print(getLLVMFunction(funcName))
+                    if attr[1][0] != 'ID':
+                        indice1 = int(attr[1][1])
+                    else:
+                        isId1 = True
+                        indice1 = loadAttr[1]
 
-                chamadaFuncao = builder.call(getLLVMFunction(funcName)[1], funcParams)
-                builder.store(chamadaFuncao, varLLVMDir)
+                    if attr[3][0] != 'ID':
+                        indice2 = int(attr[3][1])
+                    else:
+                        isId2 = True
+                        indice2 = loadAttr[3]
 
-def escreva(builder, dataPD, funcName, dataLine, line):
+                    if isId1:
+                        posicaoArray1 = builder.gep(loadAttr[0], [tipoInt(0), indice1], name='ptr_A_'+str(attr[0][1]) + '[' + str(attr[1][1]) + ']')
+
+                    else:
+                        posicaoArray1 = builder.gep(loadAttr[0], [tipoInt(0), tipoInt(indice1)], name='ptr_A_'+str(attr[0][1]) + '[' + str(attr[1][1]) + ']')
+
+                    if isId2:
+                        posicaoArray2 = builder.gep(loadAttr[2], [tipoInt(0), indice2], name='ptr_A_'+str(attr[2][1])+'['+str(attr[3][1] + ']'))
+
+                    else:
+                        posicaoArray2 = builder.gep(loadAttr[2], [tipoInt(0), tipoInt(indice2)], name='ptr_A_'+str(attr[2][1])+'['+str(attr[3][1] + ']'))
+
+                    if op[0][0] == 'MAIS':
+                        posicaoArray1 = builder.load(posicaoArray1)
+                        posicaoArray2 = builder.load(posicaoArray2)
+
+                        expressao = builder.add(posicaoArray1,posicaoArray2, name='add_A_temp')
+
+                    builder.store(expressao, varLLVMDir)
+
+def escreva(builder, dataPD, funcName, dataLine, line, functionsPD):
+
+    tipoInt = ll.IntType(32)
+
     dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
     
     # quantidade de atributos e atributos
@@ -372,20 +533,97 @@ def escreva(builder, dataPD, funcName, dataLine, line):
     loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
 
     if qtdAttr == 1:
+        
+        if 'FUNCAO' not in str(loadAttr[0]):
+            if str(loadAttr[0].type) == 'i32':
+                builder.call(escrevaInteiro, [loadAttr[0]])
 
-        if str(loadAttr[0].type) == 'i32':
-            builder.call(escrevaInteiro, [loadAttr[0]])
+            elif str(loadAttr[0].type) == 'float':
+                builder.call(escrevaFlutuante, [loadAttr[0]])
+        else:
 
-        elif str(loadAttr[0].type) == 'float':
-            builder.call(escrevaFlutuante, [loadAttr[0]])
+            funcName = loadAttr[0].split(';;')[1]
+            functionAtual = getLLVMFunction(funcName)
 
-def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
-    bloco_final = funcLLVM.append_basic_block('exit')
-    builder.branch(bloco_final)
-    builder.position_at_end(bloco_final)
+            chamadaFuncao = builder.call(functionAtual[1], [])
+            if functionAtual[2].lower() == 'inteiro':
+                builder.call(escrevaInteiro, [chamadaFuncao])
+            else:
+                builder.call(escrevaFlutuante, [chamadaFuncao])
 
-    dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+    else:
+        
+        if len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) == 0:
+            indexGeral = 0
+            function = []
 
+            while(indexGeral < len(loadAttr)):
+                
+                if 'FUNCAO' in str(loadAttr[indexGeral]):
+                    
+                    funcName = loadAttr[indexGeral].split(';;')[1]
+                    functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+
+                    function.append([len(functionPD.values[0][2]), getLLVMFunction(funcName), [], functionPD.values[0][0]])
+
+                else:
+                    
+                    isParam = function[-1]
+
+                    if isParam[0] > 0:
+                        function[-1][0] -= 1
+                        function[-1][2].append(loadAttr[indexGeral])
+
+                    if function[-1][0] == 0:
+                        functionAtual = function.pop()
+
+                        chamadaFuncao = builder.call(functionAtual[1][1], functionAtual[2])
+
+                        if functionAtual[3].lower() == 'inteiro':
+                            builder.call(escrevaInteiro, [chamadaFuncao])
+
+                        elif functionAtual[3].lower() == 'flutuante':
+                            builder.call(escrevaFlutuante, [chamadaFuncao])
+
+                indexGeral += 1
+        
+        else:
+
+            arrayVar = attr[0][1]
+
+            if isArray(arrayVar):
+
+                if len(attr) == 2:
+                    isId = False
+
+                    if attr[1][0] != 'ID':
+                        indice = int(attr[1][1])
+                    else:
+                        isId = True
+                        indice = loadAttr[1]
+
+                    if isId:
+                        posicaoArray = builder.gep(loadAttr[0], [tipoInt(0), indice], name='ptr_A_'+str(attr[1][1]))
+                    else:
+                        posicaoArray = builder.gep(loadAttr[0], [tipoInt(0), tipoInt(indice)], name='ptr_A_'+str(attr[1][1]))
+                    
+                    posicaoArray = builder.load(posicaoArray, align=4)
+                    varEscope = getLLVMVar(arrayVar, funcName)
+
+                    if varEscope[1].lower() == 'inteiro':
+                        builder.call(escrevaInteiro, [posicaoArray])
+                    elif varEscope[1].lower() == 'flutuante':
+                        builder.call(escrevaFlutuante, [posicaoArray])
+
+def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc, seRepitaBlock, functionsPD):
+
+    if len(seRepitaBlock) == 0:
+        bloco_final = funcLLVM.append_basic_block('exit')
+        builder.branch(bloco_final)
+        builder.position_at_end(bloco_final)
+
+    dataLineAttr = p.searchLineByTwoTokenByEnd(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+    
     # quantidade de atributos e atributos
     qtdAttr = p.checkAttr(dataLineAttr)
     attr = listAttr(dataLineAttr)
@@ -445,6 +683,50 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
                     
                     builder.store(expressao2, valueReturn)
             
+            builder.ret(builder.load(valueReturn))
+
+        else:
+            
+            indexGeral = 0
+            function = []
+            result = []
+
+            while(indexGeral < len(loadAttr)):
+                
+                if 'FUNCAO' in str(loadAttr[indexGeral]):
+                    
+                    funcName = loadAttr[indexGeral].split(';;')[1]
+                    functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+
+                    function.append([len(functionPD.values[0][2]), getLLVMFunction(funcName), [], functionPD.values[0][0]])
+
+                else:
+                    
+                    isParam = function[-1]
+
+                    if isParam[0] > 0:
+                        function[-1][0] -= 1
+                        function[-1][2].append(loadAttr[indexGeral])
+
+                    if function[-1][0] == 0:
+                        functionAtual = function.pop()
+
+                        chamadaFuncao = builder.call(functionAtual[1][1], functionAtual[2])
+                        result.append(chamadaFuncao)
+
+                indexGeral += 1
+
+            if len(function) > 0:
+                
+                if function[-1][0] == len(result):
+                    functionAtual = function.pop()
+
+                    chamadaFuncao = builder.call(functionAtual[1][1], result)
+                    builder.store(chamadaFuncao, valueReturn)
+            
+            elif len(result) > 0:
+                builder.store(result[0], valueReturn)
+
             builder.ret(builder.load(valueReturn))
 
 def leia(builder, dataPD, funcName, dataLine, line):
@@ -618,6 +900,18 @@ def repita(builder, dataPD, dataLine, line, funcName, loop, loopEnd):
 
     builder.position_at_end(loopEnd)
 
+def callFunction(builder, dataPD, dataLine, line, funcName, funcArray):
+    dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
+
+    # quantidade de atributos e atributos
+    qtdAttr = p.checkAttr(dataLineAttr)
+    attr = listAttr(dataLineAttr)
+    op = listOp(dataLineAttr)
+
+    loadAttr = returnLoadAttr(builder, qtdAttr, attr, funcName)
+
+    if qtdAttr == 1:
+        builder.call(funcArray[1], loadAttr, name='call_func')
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
@@ -635,11 +929,18 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
     for line in range(lineStart, (lineEnd + 1)):
         dataLine = p.searchDataLine(dataPD, line)
 
+        if len(dataLine) > 0:
+            if dataLine.values[0][0] == 'ID':
+                funcLine = getLLVMFunction(dataLine.values[0][1])
+
+                if funcLine:
+                    callFunction(builder, dataPD, dataLine, line, funcName, funcLine)
+
         if len(dataLine.loc[dataLine['token'] == 'DOIS_PONTOS']) > 0:
-            if len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) == 1:
+            if len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) > 0:
                 declareVarArray(builder, funcName, dataLine)
-            elif len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) == 2:
-                declareVarMatrix(builder, funcName, dataLine)
+            # elif len(dataLine.loc[dataLine['token'] == 'ABRE_COLCHETE']) == 2:
+            #     declareVarMatrix(builder, funcName, dataLine)
             else:
                 declareVarEscope(builder, funcName, dataLine)
 
@@ -647,7 +948,7 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
             atribuition(builder, funcName, dataLine, line, functionsPD)
 
         if len(dataLine.loc[dataLine['token'] == 'ESCREVA']) > 0:
-            escreva(builder, dataPD, funcName, dataLine, line)
+            escreva(builder, dataPD, funcName, dataLine, line, functionsPD)
     
         if len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0:
             leia(builder, dataPD, funcName, dataLine, line)
@@ -741,8 +1042,7 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
         if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
             valueReturn = True
-            retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc)
-
+            retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc, seRepitaBlock, functionsPD)
 
     if not valueReturn:
         finalBlock = funcLLVM.append_basic_block(name='exit')

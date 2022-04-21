@@ -1,16 +1,32 @@
-{Condicional}
-inteiro: idx
+inteiro: A[10]
+inteiro: B[10]
+inteiro: C[10]
 
-inteiro doubleValue(inteiro: numero)
-inteiro: resultado
-resultado := numero * 2
-retorna(numero)
+somaVetores(inteiro: n)
+    inteiro: i
+    i := 0
+    repita
+        C[i] := A[i] + B[i]
+        i := i + 1
+    até i = n 
 fim
 
-principal()
-    inteiro: a
+inteiro principal()
+    inteiro: i
+    i := 0
+    repita
+        A[i] := 1
+        B[i] := 1
+        i := i + 1
+    até i = 10
 
-    a := doubleValue(10)
+    somaVetores(10)
 
-    escreva(a)
+    i := 0
+    repita
+        escreva(C[i])
+        i := i + 1
+    até i = 10
+
+    retorna(0)
 fim
