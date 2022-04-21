@@ -220,8 +220,7 @@ def returnLoadAttr(builder, qtdAttr, attr, function):
            
             if None != varAttrLLVM:
                 tipoAttr = returnLLVMType(varAttrLLVM[1])
-
-                if 'alloca' in str(varAttrLLVM[3]):
+                if str(varAttrLLVM[3].type) == 'i32*' or str(varAttrLLVM[3].type) == 'float*':
                     loadAttr.append(builder.load(varAttrLLVM[3]))
                 else:
                     loadAttr.append(varAttrLLVM[3])
@@ -276,7 +275,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
     # se tiver apenas uma atribuicao
     if qtdAttr == 1:
 
-        if 'FUNCAO' not in loadAttr[0]:
+        if 'FUNCAO' not in str(loadAttr[0]):
             builder.store(loadAttr[0], varLLVMDir)
         
         else:
@@ -395,6 +394,58 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc):
 
     if qtdAttr == 1:
         builder.ret(loadAttr[0])
+
+    # se tiver 2 atribuicoes
+    elif qtdAttr > 1:
+        
+        valueReturn = builder.alloca(ll.IntType(32), name='return')
+
+        if 'FUNCAO' not in str(loadAttr[0]):
+
+            if op[0][0] == 'MAIS':
+                expressao = builder.add(loadAttr[0], loadAttr[1], name='add_temp')
+
+            elif op[0][0] == 'MENOS':
+                expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
+
+            elif op[0][0] == 'MULTIPLICACAO':
+                expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
+
+            elif op[0][0] == 'DIVISAO':
+                expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
+
+            builder.store(expressao, valueReturn)
+
+            canRepeat = False
+
+            if len(op) > 1:
+
+                expressao2 = None
+                idxGeral = 1
+                idxMais = 0
+                idxMenos = 0
+                idxMul = 0
+                idxDiv = 0
+
+                for idx, operacoes in enumerate(op[1:]):
+                    idxGeral += 1
+
+                    if operacoes[0] == 'MAIS':
+                        expressao2 = builder.add(loadAttr[idxGeral], expressao, name='add_temp')
+                        idxMais += 1
+                    elif operacoes[0] == 'MENOS':
+                        expressao2 = builder.sub(loadAttr[idxGeral], expressao, name='sub_temp')
+                        idxMenos += 1
+                    elif operacoes[0] == 'MULTIPLICACAO':
+                        expressao2 = builder.mul(loadAttr[idxGeral], expressao, name='mul_temp')
+                        idxMul += 1
+                    elif operacoes[0] == 'DIVISAO':
+                        expressao2 = builder.sdiv(loadAttr[idxGeral], expressao, name='div_temp')
+                        idxDiv += 1
+                    
+                    builder.store(expressao2, valueReturn)
+            
+            builder.ret(builder.load(valueReturn))
 
 def leia(builder, dataPD, funcName, dataLine, line):
     dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
