@@ -382,10 +382,10 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                     expressao = builder.sub(loadAttr[0], loadAttr[1], name='sub_temp')
 
                 elif op[0][0] == 'MULTIPLICACAO':
-                    expressao = builder.mul(loadAttr[0], loadAttr[1], name='sub_temp')
+                    expressao = builder.mul(loadAttr[0], loadAttr[1], name='mul_temp')
 
                 elif op[0][0] == 'DIVISAO':
-                    expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='sub_temp')
+                    expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='div_temp')
 
                 builder.store(expressao, varLLVMDir)
 
@@ -617,10 +617,16 @@ def escreva(builder, dataPD, funcName, dataLine, line, functionsPD):
 
 def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc, seRepitaBlock, functionsPD):
 
+    global moreOneReturn
+
     if len(seRepitaBlock) == 0:
-        bloco_final = funcLLVM.append_basic_block('exit')
-        builder.branch(bloco_final)
-        builder.position_at_end(bloco_final)
+
+        if not moreOneReturn:
+            bloco_final = funcLLVM.append_basic_block('exit')
+            builder.branch(bloco_final)
+            builder.position_at_end(bloco_final)
+    else:
+        moreOneReturn = True
 
     dataLineAttr = p.searchLineByTwoTokenByEnd(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
     
@@ -915,6 +921,9 @@ def callFunction(builder, dataPD, dataLine, line, funcName, funcArray):
 
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
+    global moreOneReturn
+    moreOneReturn = False
+
     lineStart = lineStart + 1
     funcLLVM = getLLVMFunction(funcName)
     valueReturn = False
@@ -1031,14 +1040,18 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
                 repita(builder, dataPD, dataLine, line, funcName, block[3], block[5])
 
         if len(dataLine.loc[dataLine['token'] == 'FIM']) > 0:
+            
             if len(seRepitaBlock) > 0:
-                
+
                 # pego o bloco
                 block = seRepitaBlock.pop()
+                
+                if not moreOneReturn:    
+                    # vai para o fim
+                    builder.branch(block[5])
 
-                # vai para o fim
-                builder.branch(block[5])
                 builder.position_at_end(block[5])
+
 
         if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
             valueReturn = True

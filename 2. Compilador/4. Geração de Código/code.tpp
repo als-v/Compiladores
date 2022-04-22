@@ -1,32 +1,15 @@
-inteiro: A[10]
-inteiro: B[10]
-inteiro: C[10]
-
-somaVetores(inteiro: n)
-    inteiro: i
-    i := 0
-    repita
-        C[i] := A[i] + B[i]
-        i := i + 1
-    até i = n 
-fim
-
-inteiro principal()
-    inteiro: i
-    i := 0
-    repita
-        A[i] := 1
-        B[i] := 1
-        i := i + 1
-    até i = 10
-
-    somaVetores(10)
-
-    i := 0
-    repita
-        escreva(C[i])
-        i := i + 1
-    até i = 10
+inteiro edois(inteiro: n)
+    se n = 2 então
+        retorna(2)
+    fim
 
     retorna(0)
+fim
+
+principal()
+    inteiro: i
+    
+    leia(i)
+
+    escreva(edois(i))
 fim
