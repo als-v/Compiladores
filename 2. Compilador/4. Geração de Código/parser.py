@@ -966,7 +966,8 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                         
                         # caso os tipos sejam diferentes
                         if variableEsqType != variableDirType:
-                            errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” ' + variableDirType.lower()])
+                            # errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” ' + variableDirType.lower()])
+                            pass
             else:
 
                 if variableEsqType == 'INTEIRO':
@@ -979,8 +980,9 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 dataDir = assignmentDir.loc[assignmentDir['token'] == searchType]
                 
                 for err in dataDir.values:
-                    errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + err[1] + '” ' + variableDirType.lower()])
-
+                    # errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + err[1] + '” ' + variableDirType.lower()])
+                    pass
+                
 def findEscopeVariable(variablePD, lineAtribuition):
 
     escopeVar = variablePD.loc[variablePD['linha'] < lineAtribuition]

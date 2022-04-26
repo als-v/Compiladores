@@ -365,7 +365,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
             if 'i32' in str(loadAttr[0].type) and 'i32' in str(varLLVMDir.type):
                 builder.store(loadAttr[0], varLLVMDir)
             elif 'i32' in str(loadAttr[0].type) and 'float' in str(varLLVMDir.type):
-                temp = builder.sitofp(loadAttr[0], ll.FloatType(), name="temp")
+                temp = builder.fptosi(loadAttr[0], ll.FloatType(), name="temp")
                 builder.store(temp, varLLVMDir)
         else:
             functionLLVM = getLLVMFunction(attr[0][1])[1]
@@ -391,7 +391,13 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                 elif op[0][0] == 'DIVISAO':
                     expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='div_temp')
 
-                builder.store(expressao, varLLVMDir)
+                if 'i32' in str(expressao.type) and 'i32' in str(varLLVMDir.type):
+                    builder.store(expressao, varLLVMDir)
+                elif 'float' in str(expressao.type) and 'float' in str(varLLVMDir.type):
+                    builder.store(expressao, varLLVMDir)
+                elif 'i32' in str(expressao.type) and 'float' in str(varLLVMDir.type):
+                    temp = builder.sitofp(expressao, ll.FloatType(), name="temp")
+                    builder.store(temp, varLLVMDir)
 
                 canRepeat = False
 
@@ -518,12 +524,12 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                     if op[0][0] == 'MAIS':
                         posicaoArray1 = builder.load(posicaoArray1)
                         posicaoArray2 = builder.load(posicaoArray2)
-                        
-                        if str(posicaoArray1.type) == 'float' and str(posicaoArray2.type) == 'float':
-                            expressao = builder.fadd(posicaoArray1, posicaoArray2, name='add_A_temp')
-                        
-                        else:
-                            expressao = builder.add(posicaoArray1, posicaoArray2, name='add_A_temp')
+
+                    if posicaoArray1.type == 'float' and posicaoArray2.type == 'float':
+                        expressao = builder.fadd(posicaoArray1, posicaoArray2, name='add_A_temp')
+                    
+                    else:
+                        expressao = builder.add(posicaoArray1, posicaoArray2, name='add_A_temp')
 
                     builder.store(expressao, varLLVMDir)
 
@@ -1366,9 +1372,8 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
                 block[2] = True
                 seRepitaBlock.append(block)
 
-                if not valueReturn:
-                    # vai para o if end
-                    builder.branch(block[5])
+                # vai para o if end
+                builder.branch(block[5])
 
                 # continua no senao
                 builder.position_at_end(block[4])
