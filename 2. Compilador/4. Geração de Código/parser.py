@@ -106,6 +106,17 @@ def searchLineByTwoToken(data, line, token1, token2):
     # retorno os dados entre as colunas
     return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
 
+def searchLineByTwoToken2(data, line, token1, idxToken1, token2):
+    # pega todos os valores da linha
+    lineData = searchDataLine(data, line)
+
+    # filtra pelo token
+    columnToken1 = lineData.loc[lineData['token'] == token1, 'coluna'].values[idxToken1]
+    columnToken2 = lineData.loc[lineData['token'] == token2, 'coluna'].values[0]
+    
+    # retorno os dados entre as colunas
+    return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
+
 def searchLineByTwoTokenByEnd(data, line, token1, token2):
     # pega todos os valores da linha
     lineData = searchDataLine(data, line)
@@ -890,8 +901,8 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                     if len(variableDir) == 0:
 
                         if isFunction(dataPD, variableAssignmentDir[2], variableAssignmentDir[1]):
-                            # errors.append(['ERRO', 'Erro: Chamada a função “' + variableAssignmentDir[1] + '” que não declarada'])
-                            pass
+                            errors.append(['ERRO', 'Erro: Chamada a função “' + variableAssignmentDir[1] + '” que não declarada'])
+                        
                         else:
                             errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
                     
@@ -929,9 +940,10 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 
                     # caso nao encontre
                     if len(variableDir) == 0:
-                        errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
+                        # errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
                         variableDirType = ''
-                    
+                        pass
+
                     else:
                         
                         # encontrar o tipo de variavel daquele escopo

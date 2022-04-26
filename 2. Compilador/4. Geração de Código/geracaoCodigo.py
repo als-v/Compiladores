@@ -804,6 +804,8 @@ def returnType(tipo, value):
         return tipoFlutuante(value)
 
 def verifyQtdComparation(dataLine):
+    qtdIgual = len(dataLine.loc[dataLine['token'] == 'IGUAL'])
+    qtdNot = len(dataLine.loc[dataLine['token'] == 'NEGACAO'])
     qtdMaior = len(dataLine.loc[dataLine['token'] == 'MAIOR'])
     qtdMaiorIgual = len(dataLine.loc[dataLine['token'] == 'MAIOR_IGUAL'])
     qtdMenor = len(dataLine.loc[dataLine['token'] == 'MENOR'])
@@ -811,7 +813,7 @@ def verifyQtdComparation(dataLine):
     qtdELogico = len(dataLine.loc[dataLine['token'] == 'E_LOGICO'])
     qtdOULogico = len(dataLine.loc[dataLine['token'] == 'OU_LOGICO'])
 
-    return qtdMaior + qtdMaiorIgual + qtdMenor + qtdMenorIgual + qtdELogico + qtdOULogico
+    return qtdIgual + qtdNot + qtdMaior + qtdMaiorIgual + qtdMenor + qtdMenorIgual + qtdELogico + qtdOULogico
 
 def getSecondCompare(dataLine):
     returnSecond = False
@@ -842,11 +844,70 @@ def getSecondCompare(dataLine):
             if returnSecond: return '||', 'OU_LOGICO'
             returnSecond = True
 
+def getCompares(dataLine):
+    compares = []
+    pegar = False
+
+    for values in dataLine.values:
+
+        if values[0] == 'MAIOR':
+            if pegar: 
+                compares.append([values[1], 'MAIOR'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'MAIOR_IGUAL':
+            if pegar: 
+                compares.append([values[1], 'MAIOR_IGUAL'])
+                pegar = False
+            else:
+                pegar = True
+ 
+        elif values[0] == 'MENOR':
+            if pegar: 
+                compares.append([values[1], 'MENOR'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'MENOR_IGUAL':
+            if pegar: 
+                compares.append([values[1], 'MENOR_IGUAL'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'E_LOGICO':
+            if pegar: 
+                compares.append([values[1], 'E_LOGICO'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'OU_LOGICO':
+            if pegar: 
+                compares.append([values[1], 'OU_LOGICO'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'IGUAL':
+            if pegar: 
+                compares.append([values[1], 'IGUAL'])
+                pegar = False
+            else:
+                pegar = True
+
+        elif values[0] == 'NEGACAO':
+            compares.append([values[1], 'NEGACAO'])
+    
+    return compares
+
 def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTrue, seFalse, seEnd):
     
     qtdComper = verifyQtdComparation(dataLine)
 
-    print('QTDCOMPER: ', qtdComper)
     if qtdComper == 3:
         secondCompare = getSecondCompare(dataLine)
 
@@ -933,6 +994,164 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
 
             builder.position_at_end(seTrue)
 
+    elif qtdComper == 6:
+        compares = getCompares(dataLine)
+
+        # comparacao, token = getCompare(dataLine)
+        dataLine1 = p.searchLineByTwoToken(dataPD, line, 'SE', compares[0][1])
+        
+        # pego a comparacao
+        comparacao, token = getCompare(dataLine1)
+
+        # quantidade de atributos e atributos
+        dataSeEsq = p.searchLineByTwoToken(dataPD, line, 'SE', token)
+        qtdAttrEsq = p.checkAttr(dataSeEsq)
+        attrEsq = listAttr(dataSeEsq)
+
+        # pegar as variaveis inicializadas
+        loadAttrEsq = returnLoadAttr(builder, qtdAttrEsq, attrEsq, funcName)
+
+        # quantidade de atributos e atributos
+        dataSeDir = p.searchLineByTwoToken(dataPD, line, token, compares[0][1])
+        qtdAttrDir = p.checkAttr(dataSeDir)
+        attrDir = listAttr(dataSeDir)
+        
+        # pegar as variaveis inicializadas
+        loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
+
+        # crio a comparacao
+        comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
+        comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
+        print('1: ', qtdAttrEsq, qtdAttrDir)
+        if qtdAttrEsq == 3 and qtdAttrDir == 1:
+            
+            loadEsq = []
+            attr = []
+
+            for attrEsq in loadAttrEsq:
+                if 'FUNCAO' in str(attrEsq):
+                    funcNameA = attrEsq.split(';;')[1]
+                    functionLLVM = getLLVMFunction(funcNameA)
+
+                    loadEsq.append(functionLLVM[1])
+                else:
+                    attr.append(attrEsq)
+
+            funcCall = builder.call(loadEsq[0], attr, name='call_func')
+            builder.store(funcCall, comperLeft, align=4)
+            builder.store(loadAttrDir[0], comperRight, align=4)
+            
+            llvmFunc = getLLVMFunction(funcName)[1]
+            seFalse = llvmFunc.append_basic_block('if_false')
+
+            # crio o bloco do if
+            ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
+            builder.cbranch(ifState, seTrue, seFalse)
+
+            builder.position_at_end(seFalse)
+
+        # comparacao, token = getCompare(dataLine)
+        dataLine1 = p.searchLineByTwoToken(dataPD, line, 'SE', compares[1][1])
+        
+        # pego a comparacao
+        comparacao, token = getCompare(dataLine1)
+        
+        # quantidade de atributos e atributos
+        dataSeEsq = p.searchLineByTwoToken(dataPD, line, compares[0][1], token)
+        qtdAttrEsq = p.checkAttr(dataSeEsq)
+        attrEsq = listAttr(dataSeEsq)
+
+        # pegar as variaveis inicializadas
+        loadAttrEsq = returnLoadAttr(builder, qtdAttrEsq, attrEsq, funcName)
+
+        # quantidade de atributos e atributos
+        dataSeDir = p.searchLineByTwoToken2(dataPD, line, token, 1, compares[1][1])
+        qtdAttrDir = p.checkAttr(dataSeDir)
+        attrDir = listAttr(dataSeDir)
+        
+        # pegar as variaveis inicializadas
+        loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
+
+        # crio a comparacao
+        comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
+        comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
+        print('2: ', qtdAttrEsq, qtdAttrDir)
+        if qtdAttrEsq == 4 and qtdAttrDir == 1:
+           
+            loadEsq = []
+            attr = []
+
+            for attrEsq in loadAttrEsq:
+                if 'FUNCAO' in str(attrEsq):
+                    funcNameA = attrEsq.split(';;')[1]
+                    functionLLVM = getLLVMFunction(funcNameA)
+
+                    loadEsq.append(functionLLVM[1])
+                else:
+                    attr.append(attrEsq)
+
+            funcCall = builder.call(loadEsq[0], [attr[0], attr[1]], name='call_func')
+            builder.store(funcCall, comperLeft, align=4)
+            builder.store(loadAttrDir[0], comperRight, align=4)
+            
+            funcaoEscopoLLVM = getLLVMFunction(funcName)[1]
+            verifyBlock = funcaoEscopoLLVM.append_basic_block('verify')
+
+            # crio o bloco do if
+            ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
+            builder.cbranch(ifState, verifyBlock, seFalse)
+
+            builder.position_at_end(verifyBlock)
+
+        # comparacao, token = getCompare(dataLine)
+        dataLine1 = p.searchLineByTwoToken(dataPD, line, compares[2][1], 'ENTAO')
+        
+        # pego a comparacao
+        comparacao, token = getCompare(dataLine1)
+
+        # quantidade de atributos e atributos
+        dataSeEsq = p.searchLineByTwoToken(dataPD, line, compares[2][1], 'ENTAO')
+        qtdAttrEsq = p.checkAttr(dataSeEsq)
+        attrEsq = listAttr(dataSeEsq)
+
+        # pegar as variaveis inicializadas
+        loadAttrEsq = returnLoadAttr(builder, qtdAttrEsq, attrEsq, funcName)
+
+        # quantidade de atributos e atributos
+        dataSeDir = p.searchLineByTwoToken2(dataPD, line, token, 2, 'ENTAO')
+        qtdAttrDir = p.checkAttr(dataSeDir)
+        attrDir = listAttr(dataSeDir)
+        
+        # pegar as variaveis inicializadas
+        loadAttrDir = returnLoadAttr(builder, qtdAttrDir, attrDir, funcName)
+
+        # crio a comparacao
+        comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
+        comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
+        print('3: ', qtdAttrEsq, qtdAttrDir)
+        if qtdAttrEsq == 4 and qtdAttrDir == 1:
+           
+            loadEsq = []
+            attr = []
+
+            for attrEsq in loadAttrEsq:
+                if 'FUNCAO' in str(attrEsq):
+                    funcNameA = attrEsq.split(';;')[1]
+                    functionLLVM = getLLVMFunction(funcNameA)
+
+                    loadEsq.append(functionLLVM[1])
+                else:
+                    attr.append(attrEsq)
+
+            funcCall = builder.call(loadEsq[0], [attr[0], attr[1]], name='call_func')
+            builder.store(funcCall, comperLeft, align=4)
+            builder.store(loadAttrDir[0], comperRight, align=4)
+            
+            # crio o bloco do if
+            ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
+            builder.cbranch(ifState, seTrue, seFalse)
+
+            builder.position_at_end(seTrue)
     else:
 
         # pego a comparacao

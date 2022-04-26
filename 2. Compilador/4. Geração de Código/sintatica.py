@@ -204,7 +204,12 @@ def p_declaracao_funcao_error(p):
 
     global linha, coluna, erroMessage
 
-    print('\n[Linha: {}, Coluna: {}] {}: Erro ao definir a função.\n'.format(linha, coluna, erroMessage))
+    if erroMessage[-3:-1] == 'se':
+        print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao SE (expressao ou corpo).\n'.format(linha, coluna, erroMessage))
+    
+    else:
+        print('\n[Linha: {}, Coluna: {}] {}: Erro ao definir a função.\n'.format(linha, coluna, erroMessage))
+    
     mostrarErro(p)
 
 def p_cabecalho(p):
@@ -286,14 +291,17 @@ def p_parametro(p):
         p[3] = filho3
 
 def p_parametro_error(p):
-    """parametro : error DOIS_PONTOS ID
-                | error ABRE_COLCHETE FECHA_COLCHETE
+    """parametro : tipo error ID
+                | error ID
+                | parametro error FECHA_COLCHETE
+                | parametro ABRE_COLCHETE error
     """
-
+    
     global linha, coluna, erroMessage
 
-    print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do parametro (tipo ou parametro).\n'.format(linha, coluna, erroMessage))
+    # print('\n[Linha: {}, Coluna: {}] {}: Erro na definicao do parametro (tipo ou parametro).\n'.format(linha, coluna, erroMessage))
     mostrarErro(p)
+    parser.errok()
 
 def p_corpo(p):
     """corpo : corpo acao
@@ -772,7 +780,7 @@ def p_vazio(p):
     p[0] = pai
 
 def p_error(p):
-    global linha, coluna, erroMessage, sintaticError
+    global linha, coluna, erroMessage
 
     if None != p:
         line_start = source_file.rfind('\n', 0, p.lexpos) + 1
@@ -780,6 +788,13 @@ def p_error(p):
         linha = p.lineno
         coluna = (p.lexpos - line_start) + 1
         erroMessage = 'Próximo ao token “' + str(p.value) + '”'
+
+        if str(p.type) == 'NUM_NOTACAO_CIENTIFICA' or str(p.type) == 'NUM_PONTO_FLUTUANTE' or str(p.type) == 'NUM_INTEIRO' or str(p.type) == 'ABRE_PARENTESE' or str(p.type) == 'FECHA_PARENTESE' or str(p.type) == 'MAIS' or str(p.type) == 'MENOS':
+            print('\n[Linha: {}, Coluna: {}] {}: Erro de declaracao.'.format(linha, coluna, erroMessage))
+            parser.errok()
+
+    else:
+        print('\nErro de sintaxe no arquivo!')
 
 def main(file, dLogs, sTree):
 
