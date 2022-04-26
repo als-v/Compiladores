@@ -286,10 +286,8 @@ def p_parametro(p):
         p[3] = filho3
 
 def p_parametro_error(p):
-    """parametro : tipo error ID
-                | error ID
-                | parametro error FECHA_COLCHETE
-                | parametro ABRE_COLCHETE error
+    """parametro : error DOIS_PONTOS ID
+                | error ABRE_COLCHETE FECHA_COLCHETE
     """
 
     global linha, coluna, erroMessage

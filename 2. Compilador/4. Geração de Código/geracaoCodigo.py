@@ -846,6 +846,7 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
     
     qtdComper = verifyQtdComparation(dataLine)
 
+    print('QTDCOMPER: ', qtdComper)
     if qtdComper == 3:
         secondCompare = getSecondCompare(dataLine)
 

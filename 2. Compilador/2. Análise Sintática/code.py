@@ -204,7 +204,12 @@ def p_declaracao_funcao_error(p):
 
     global linha, coluna, erroMessage
 
-    print('\n[Linha: {}, Coluna: {}] {}: Erro ao definir a função.\n'.format(linha, coluna, erroMessage))
+    if erroMessage[-3:-1] == 'se':
+        print('\n[Linha: {}, Coluna: {}] {}: Erro de definicao SE (expressao ou corpo).\n'.format(linha, coluna, erroMessage))
+    
+    else:
+        print('\n[Linha: {}, Coluna: {}] {}: Erro ao definir a função.\n'.format(linha, coluna, erroMessage))
+    
     mostrarErro(p)
 
 def p_cabecalho(p):
@@ -782,6 +787,13 @@ def p_error(p):
         linha = p.lineno
         coluna = (p.lexpos - line_start) + 1
         erroMessage = 'Próximo ao token “' + str(p.value) + '”'
+
+        if str(p.type) == 'NUM_NOTACAO_CIENTIFICA' or str(p.type) == 'NUM_PONTO_FLUTUANTE' or str(p.type) == 'NUM_INTEIRO' or str(p.type) == 'ABRE_PARENTESE' or str(p.type) == 'FECHA_PARENTESE' or str(p.type) == 'MAIS' or str(p.type) == 'MENOS':
+            print('\n[Linha: {}, Coluna: {}] {}: Erro de declaracao.'.format(linha, coluna, erroMessage))
+            parser.errok()
+
+    else:
+        print('\nErro de sintaxe no arquivo!')
 
 def main():
 
