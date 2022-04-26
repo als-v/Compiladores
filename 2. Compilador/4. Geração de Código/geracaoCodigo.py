@@ -361,8 +361,12 @@ def atribuition(builder, function, dataLine, line, functionsPD):
     if qtdAttr == 1:
 
         if 'FUNCAO' not in str(loadAttr[0]):
-            builder.store(loadAttr[0], varLLVMDir)
-        
+
+            if 'i32' in str(loadAttr[0].type) and 'i32' in str(varLLVMDir.type):
+                builder.store(loadAttr[0], varLLVMDir)
+            elif 'i32' in str(loadAttr[0].type) and 'float' in str(varLLVMDir.type):
+                temp = builder.sitofp(loadAttr[0], ll.FloatType(), name="temp")
+                builder.store(temp, varLLVMDir)
         else:
             functionLLVM = getLLVMFunction(attr[0][1])[1]
             chamadaFuncao = builder.call(functionLLVM, [])
@@ -514,8 +518,12 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                     if op[0][0] == 'MAIS':
                         posicaoArray1 = builder.load(posicaoArray1)
                         posicaoArray2 = builder.load(posicaoArray2)
-
-                        expressao = builder.add(posicaoArray1,posicaoArray2, name='add_A_temp')
+                        
+                        if str(posicaoArray1.type) == 'float' and str(posicaoArray2.type) == 'float':
+                            expressao = builder.fadd(posicaoArray1, posicaoArray2, name='add_A_temp')
+                        
+                        else:
+                            expressao = builder.add(posicaoArray1, posicaoArray2, name='add_A_temp')
 
                     builder.store(expressao, varLLVMDir)
 
@@ -1022,7 +1030,7 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
         # crio a comparacao
         comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
         comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
-        print('1: ', qtdAttrEsq, qtdAttrDir)
+
         if qtdAttrEsq == 3 and qtdAttrDir == 1:
             
             loadEsq = []
@@ -1042,13 +1050,13 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
             builder.store(loadAttrDir[0], comperRight, align=4)
             
             llvmFunc = getLLVMFunction(funcName)[1]
-            seFalse = llvmFunc.append_basic_block('if_false')
+            verify = llvmFunc.append_basic_block('verify')
 
             # crio o bloco do if
             ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
-            builder.cbranch(ifState, seTrue, seFalse)
+            builder.cbranch(ifState, seTrue, verify)
 
-            builder.position_at_end(seFalse)
+            builder.position_at_end(verify)
 
         # comparacao, token = getCompare(dataLine)
         dataLine1 = p.searchLineByTwoToken(dataPD, line, 'SE', compares[1][1])
@@ -1057,7 +1065,7 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
         comparacao, token = getCompare(dataLine1)
         
         # quantidade de atributos e atributos
-        dataSeEsq = p.searchLineByTwoToken(dataPD, line, compares[0][1], token)
+        dataSeEsq = p.searchLineByTwoToken3(dataPD, line, compares[0][1], token, 1)
         qtdAttrEsq = p.checkAttr(dataSeEsq)
         attrEsq = listAttr(dataSeEsq)
 
@@ -1075,8 +1083,8 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
         # crio a comparacao
         comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
         comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
-        print('2: ', qtdAttrEsq, qtdAttrDir)
-        if qtdAttrEsq == 4 and qtdAttrDir == 1:
+
+        if qtdAttrEsq == 3 and qtdAttrDir == 1:
            
             loadEsq = []
             attr = []
@@ -1095,11 +1103,11 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
             builder.store(loadAttrDir[0], comperRight, align=4)
             
             funcaoEscopoLLVM = getLLVMFunction(funcName)[1]
-            verifyBlock = funcaoEscopoLLVM.append_basic_block('verify')
+            verifyBlock = funcaoEscopoLLVM.append_basic_block('verify.1')
 
             # crio o bloco do if
             ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
-            builder.cbranch(ifState, verifyBlock, seFalse)
+            builder.cbranch(ifState, verifyBlock, seEnd)
 
             builder.position_at_end(verifyBlock)
 
@@ -1110,7 +1118,7 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
         comparacao, token = getCompare(dataLine1)
 
         # quantidade de atributos e atributos
-        dataSeEsq = p.searchLineByTwoToken(dataPD, line, compares[2][1], 'ENTAO')
+        dataSeEsq = p.searchLineByTwoToken3(dataPD, line, compares[2][1], token, 2)
         qtdAttrEsq = p.checkAttr(dataSeEsq)
         attrEsq = listAttr(dataSeEsq)
 
@@ -1128,8 +1136,8 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
         # crio a comparacao
         comperRight = builder.alloca(ll.IntType(32), name='var_comp_if_r')
         comperLeft = builder.alloca(ll.IntType(32), name='var_comp_if_l')
-        print('3: ', qtdAttrEsq, qtdAttrDir)
-        if qtdAttrEsq == 4 and qtdAttrDir == 1:
+
+        if qtdAttrEsq == 3 and qtdAttrDir == 1:
            
             loadEsq = []
             attr = []
@@ -1149,7 +1157,7 @@ def se(builder, dataPD, funcName, dataLine, line, seRepitaBlock, idxBlock, seTru
             
             # crio o bloco do if
             ifState = builder.icmp_signed(comparacao, builder.load(comperLeft), builder.load(comperRight), name='if_state')
-            builder.cbranch(ifState, seTrue, seFalse)
+            builder.cbranch(ifState, seEnd, seTrue)
 
             builder.position_at_end(seTrue)
     else:
@@ -1358,8 +1366,9 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
                 block[2] = True
                 seRepitaBlock.append(block)
 
-                # vai para o if end
-                builder.branch(block[5])
+                if not valueReturn:
+                    # vai para o if end
+                    builder.branch(block[5])
 
                 # continua no senao
                 builder.position_at_end(block[4])

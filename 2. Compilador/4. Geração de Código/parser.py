@@ -117,6 +117,17 @@ def searchLineByTwoToken2(data, line, token1, idxToken1, token2):
     # retorno os dados entre as colunas
     return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
 
+def searchLineByTwoToken3(data, line, token1, token2, idxToken2):
+    # pega todos os valores da linha
+    lineData = searchDataLine(data, line)
+
+    # filtra pelo token
+    columnToken1 = lineData.loc[lineData['token'] == token1, 'coluna'].values[0]
+    columnToken2 = lineData.loc[lineData['token'] == token2, 'coluna'].values[idxToken2]
+    
+    # retorno os dados entre as colunas
+    return lineData.loc[(lineData['coluna'] > columnToken1) & (lineData['coluna'] < columnToken2)]
+
 def searchLineByTwoTokenByEnd(data, line, token1, token2):
     # pega todos os valores da linha
     lineData = searchDataLine(data, line)
