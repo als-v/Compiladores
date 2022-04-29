@@ -89,13 +89,26 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
                             # pego todos os indices
                             dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_INTEIRO']
                             
-                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                            for idx in range(len(var[5])):
+                            if len(dimensionsAttr) > 0:
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
 
-                                # caso a dimensao esteja fora do intervalo
-                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
-                    
+                                    # caso a dimensao esteja fora do intervalo
+                                    if int(dimensionsAttr.values[idx][1]) >= int(var[5][idx]):
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                            else:
+                                dimensionsAttr = dataLineAttr.loc[dataLineAttr['token'] == 'NUM_PONTO_FLUTUANTE']
+
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
+                                    
+                                    typeArray = dimensionsAttr.values[idx][1]
+                                    
+                                    try:
+                                        int(typeArray)
+                                    except:
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” não inteiro'])
+
                     # procuro os valores que vieram antes
                     dataLineBeforeAttr = dataLine.loc[dataLine['coluna'] < dataLineAtt['coluna'].values[0]]
 
@@ -108,12 +121,28 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
                             # pego todos os indices
                             dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_INTEIRO']
 
-                            # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
-                            for idx in range(len(var[5])):
+                            if len(dimensionsAttr) > 0:
 
-                                # caso a dimensao esteja fora do intervalo
-                                if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
-                                    errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
+                                    
+                                    # caso a dimensao esteja fora do intervalo
+                                    if int(dimensionsAttr.values[idx][1]) >= int(var[5][idx]):
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
+                            
+                            else:
+                                
+                                dimensionsAttr = dataLineBeforeAttr.loc[dataLineBeforeAttr['token'] == 'NUM_PONTO_FLUTUANTE']
+
+                                # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
+                                for idx in range(len(var[5])):
+                                    
+                                    typeArray = dimensionsAttr.values[idx][1]
+                                    
+                                    try:
+                                        int(typeArray)
+                                    except:
+                                        errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” não inteiro'])
 
 def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     allID = dataPD.loc[dataPD['token'] == 'ID']
@@ -129,6 +158,9 @@ def variablesVerify(dataPD, functionsPD, variablesPD, errors):
 
             if not found and id[1] not in variablesPD['nome'].values:
                 errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
+            elif found and id[1] not in variablesPD['nome'].values:
+                if id[1] not in functionsPD.values:
+                    errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
 def verifyRead(dataPD, variablesPD, errors):
 
@@ -150,7 +182,7 @@ def verifyRead(dataPD, variablesPD, errors):
                 init = True
 
             # caso tenha uma funcao 'leia()' e a variavel nao esta inicializada 
-            if ((len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0) and (not init)):
+            if ((len(dataLine.loc[dataLine['token'] == 'ESCREVA']) > 0) and (not init)):
                 errors.append(['AVISO', 'Aviso: Variável “' + var[1] + '” declarada e não inicializada'])
 
         # caso ela esteja inicializada, porem nao atualizada na tabela

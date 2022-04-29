@@ -462,11 +462,11 @@ def verifyVariableUse(dataPD, variablesPD, errors):
         if (len(variablePD) == (len(anotherDeclarationEscope) + len(anotherDeclarationGlobal) + 1)):
                 errors.append(['AVISO', 'Aviso: Variável “' + variable[1] + '” declarada, mas não utilizada'])
 
-        for var in variablePD.values:
-            lineVar = searchDataLine(dataPD, var[2])
+        # for var in variablePD.values:
+        #     lineVar = searchDataLine(dataPD, var[2])
 
-            if len(lineVar.loc[lineVar['token'] == 'ESCREVA']) > 0:
-                totalDeclarations -= 1
+        #     if len(lineVar.loc[lineVar['token'] == 'ESCREVA']) > 0:
+        #         totalDeclarations -= 1
         
         # caso so tenha uma recorrência
         if totalDeclarations == 1:

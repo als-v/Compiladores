@@ -1,7 +1,9 @@
 inteiro: n
 
-inteiro fatorial(inteiro: n)
-    inteiro: fat
+inteiro fatorial(inteiro: i)
+    inteiro: fat, n
+
+    n:=i
     se n > 0 então {não calcula se n > 0}
         fat := 1
         repita
