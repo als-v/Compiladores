@@ -365,7 +365,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
             if 'i32' in str(loadAttr[0].type) and 'i32' in str(varLLVMDir.type):
                 builder.store(loadAttr[0], varLLVMDir)
             elif 'i32' in str(loadAttr[0].type) and 'float' in str(varLLVMDir.type):
-                temp = builder.fptosi(loadAttr[0], ll.FloatType(), name="temp")
+                temp = builder.sitofp(loadAttr[0], ll.FloatType(), name="temp")
                 builder.store(temp, varLLVMDir)
         else:
             functionLLVM = getLLVMFunction(attr[0][1])[1]
@@ -525,7 +525,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                         posicaoArray1 = builder.load(posicaoArray1)
                         posicaoArray2 = builder.load(posicaoArray2)
 
-                    if posicaoArray1.type == 'float' and posicaoArray2.type == 'float':
+                    if str(posicaoArray1.type) == 'float' and str(posicaoArray2.type) == 'float':
                         expressao = builder.fadd(posicaoArray1, posicaoArray2, name='add_A_temp')
                     
                     else:
@@ -706,48 +706,76 @@ def retorna(builder, dataPD, funcName, funcLLVM, dataLine, line, typeFunc, seRep
             builder.ret(builder.load(valueReturn))
 
         else:
-            
-            indexGeral = 0
-            function = []
-            result = []
 
-            while(indexGeral < len(loadAttr)):
+            if len(op) != 3:
                 
-                if 'FUNCAO' in str(loadAttr[indexGeral]):
+                indexGeral = 0
+                function = []
+                result = []
+
+                while(indexGeral < len(loadAttr)):
                     
-                    funcName = loadAttr[indexGeral].split(';;')[1]
-                    functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
+                    if 'FUNCAO' in str(loadAttr[indexGeral]):
+                        
+                        funcName = loadAttr[indexGeral].split(';;')[1]
+                        functionPD = functionsPD.loc[functionsPD['nome'] == funcName]
 
-                    function.append([len(functionPD.values[0][2]), getLLVMFunction(funcName), [], functionPD.values[0][0]])
+                        function.append([len(functionPD.values[0][2]), getLLVMFunction(funcName), [], functionPD.values[0][0]])
 
-                else:
+                    else:
+                        
+                        isParam = function[-1]
+
+                        if isParam[0] > 0:
+                            function[-1][0] -= 1
+                            function[-1][2].append(loadAttr[indexGeral])
+            
+                        if function[-1][0] == 0:
+                            functionAtual = function.pop()
+
+                            chamadaFuncao = builder.call(functionAtual[1][1], functionAtual[2])
+                            result.append(chamadaFuncao)
+
+                    indexGeral += 1
+
+                if len(function) > 0:
                     
-                    isParam = function[-1]
-
-                    if isParam[0] > 0:
-                        function[-1][0] -= 1
-                        function[-1][2].append(loadAttr[indexGeral])
-
-                    if function[-1][0] == 0:
+                    if function[-1][0] == len(result):
                         functionAtual = function.pop()
 
-                        chamadaFuncao = builder.call(functionAtual[1][1], functionAtual[2])
-                        result.append(chamadaFuncao)
-
-                indexGeral += 1
-
-            if len(function) > 0:
+                        chamadaFuncao = builder.call(functionAtual[1][1], result)
+                        builder.store(chamadaFuncao, valueReturn)
                 
-                if function[-1][0] == len(result):
-                    functionAtual = function.pop()
+                elif len(result) > 0:
+                    builder.store(result[0], valueReturn)
 
-                    chamadaFuncao = builder.call(functionAtual[1][1], result)
-                    builder.store(chamadaFuncao, valueReturn)
-            
-            elif len(result) > 0:
-                builder.store(result[0], valueReturn)
+                builder.ret(builder.load(valueReturn))
 
-            builder.ret(builder.load(valueReturn))
+            else:
+
+                # print('aqui: ', loadAttr)
+
+                funcName = loadAttr[0].split(';;')[1]
+                funcaoLLVMPD = getLLVMFunction(funcName)
+
+                if op[0][0] == 'MENOS':
+                    expressao1 = builder.sub(loadAttr[1], loadAttr[2], name='sub_temp')
+
+                chamadaFuncao1 = builder.call(funcaoLLVMPD[1], [expressao1])
+
+                funcName = loadAttr[3].split(';;')[1]
+                funcaoLLVMPD = getLLVMFunction(funcName)
+
+                if op[2][0] == 'MENOS':
+                    expressao2 = builder.sub(loadAttr[4], loadAttr[5], name='sub_temp')
+
+                chamadaFuncao2 = builder.call(funcaoLLVMPD[1], [expressao2])
+
+                if op[1][0] == 'MAIS':
+                    expressao = builder.add(chamadaFuncao1, chamadaFuncao2, name='add_temp')
+                
+                builder.store(expressao, valueReturn)
+                builder.ret(builder.load(valueReturn))
 
 def leia(builder, dataPD, funcName, dataLine, line):
     dataLineAttr = p.searchLineByTwoToken(dataPD, line, 'ABRE_PARENTESE', 'FECHA_PARENTESE')
@@ -1281,6 +1309,15 @@ def callFunction(builder, dataPD, dataLine, line, funcName, funcArray):
     if qtdAttr == 1:
         builder.call(funcArray[1], loadAttr, name='call_func')
 
+def findReturns(dataPD, functionPD, funcName):
+    fPD = functionPD.loc[functionPD['nome'] == funcName]
+    lineStart = fPD['linha_inicio'].values[0]
+    lineEnd = fPD['linha_fim'].values[0]
+
+    escopoPD = dataPD.loc[(dataPD['linha'] >= lineStart) & (dataPD['linha'] <= lineEnd)]
+
+    return len(escopoPD.loc[escopoPD['token'] == 'RETORNA'])
+
 def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
     global moreOneReturn
@@ -1331,11 +1368,19 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
 
             # se possuir o senao
             if senao:
-
+                
+                returns = findReturns(dataPD, functionsPD, funcName)
+                
                 # crio os blocos: verdade, falso e fim
                 seTrue = funcLLVM.append_basic_block('if_true')
                 seFalse = funcLLVM.append_basic_block('if_false')
-                seEnd = funcLLVM.append_basic_block('if_end')
+                seEnd = None
+
+                if returns == 2:
+                    moreOneReturn = True
+                else:
+                    seEnd = funcLLVM.append_basic_block('if_end')
+                
 
                 # adiciono na lista: [TIPO, se possui senao, se ja executou o senao, bloco verdade, bloco falso, bloco fim]
                 seRepitaBlock.append(['SE', senao, False, seTrue, seFalse, seEnd])
@@ -1372,8 +1417,9 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
                 block[2] = True
                 seRepitaBlock.append(block)
 
-                # vai para o if end
-                builder.branch(block[5])
+                if not moreOneReturn:
+                    # vai para o if end
+                    builder.branch(block[5])
 
                 # continua no senao
                 builder.position_at_end(block[4])
@@ -1412,7 +1458,8 @@ def declareAll(builder, dataPD, funcName, lineStart, lineEnd, functionsPD):
                     # vai para o fim
                     builder.branch(block[5])
 
-                builder.position_at_end(block[5])
+                if block[5]:
+                    builder.position_at_end(block[5])
 
 
         if len(dataLine.loc[dataLine['token'] == 'RETORNA']) > 0:
