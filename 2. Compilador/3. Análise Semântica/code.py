@@ -150,6 +150,7 @@ def variablesVerify(dataPD, functionsPD, variablesPD, errors):
     for id in allID.values:
 
         if id[1] not in functionsPD['nome'].values:
+
             found = False
             for err in errors:
                 if id[1] in err[1]:

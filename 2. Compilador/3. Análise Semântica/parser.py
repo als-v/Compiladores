@@ -269,96 +269,102 @@ def getFunctions(dataPD):
     return functions
 
 def verifyFunctions(dataPD, functionsPD, variablesPD, errors):
-    verifyFunctionsLine(dataPD, functionsPD, errors)
+    functionsPD = verifyFunctionsLine(dataPD, functionsPD, errors)
     verifyFunctionsRepeat(dataPD, functionsPD, errors)
     verifyFunctionReturn(dataPD, functionsPD, variablesPD, errors)
+
+    return functionsPD
 
 def verifyFunctionReturn(dataPD, functionsPD, variablesPD, errors):
 
     # para cada funcao
     for function in functionsPD.values:
 
-        # pego o escopo
-        functionEscope = getEscopeByLine(dataPD, function[3], function[4])
+        if function[0]:
 
-        # caso não tenha retorno, mas nao seja vazio
-        if ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) == 0) and (function[0] != 'VAZIO')):
-                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna vazio'])
-        
-        # caso tenha retorno
-        elif ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) > 0)):
-                
-                # pego a linha do retorno
-                functionReturn = functionEscope.loc[functionEscope['token'] == 'RETORNA']
+            # pego o escopo
+            functionEscope = getEscopeByLine(dataPD, function[3], function[4])
 
-                # pego os valores para retornar
-                valuesReturn = searchLineByTwoTokenByEnd(dataPD, functionReturn['linha'].values[0], 'ABRE_PARENTESE', 'FECHA_PARENTESE')
-
-                error = False
-
-                # para cada um dos valores
-                for values in valuesReturn.values:
+            # caso não tenha retorno, mas nao seja vazio
+            if ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) == 0) and (function[0] != 'VAZIO')):
+                    errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna vazio'])
+            
+            # caso tenha retorno
+            elif ((len(functionEscope.loc[functionEscope['token'] == 'RETORNA']) > 0)):
                     
-                    # caso seja uma variavel ou uma chamada de funcao
-                    if values[0] == 'ID':
+                    # pego a linha do retorno
+                    functionReturn = functionEscope.loc[functionEscope['token'] == 'RETORNA']
 
-                        # vejo se e uma variavel
-                        valueVariableId = variablesPD.loc[variablesPD['nome'] == values[1]]
+                    # pego os valores para retornar
+                    valuesReturn = searchLineByTwoTokenByEnd(dataPD, functionReturn['linha'].values[0], 'ABRE_PARENTESE', 'FECHA_PARENTESE')
 
-                        # caso for
-                        if len(valueVariableId) > 0:
+                    error = False
 
-                            # pego seu valor
-                            valueVariableId = valueVariableId.values[0]
+                    # para cada um dos valores
+                    for values in valuesReturn.values:
+                        
+                        # caso seja uma variavel ou uma chamada de funcao
+                        if values[0] == 'ID':
 
-                            # verifico o retorno
-                            if valueVariableId[0] != function[0]:
-                                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna ' + valueVariableId[0].lower()])
+                            # vejo se e uma variavel
+                            valueVariableId = variablesPD.loc[variablesPD['nome'] == values[1]]
 
-                        else:
-                            
-                            # pego a funcao
-                            valueVariableId = functionsPD.loc[functionsPD['nome'] == values[1]]
-                            
-                            # caso exista
+                            # caso for
                             if len(valueVariableId) > 0:
 
                                 # pego seu valor
                                 valueVariableId = valueVariableId.values[0]
-                                
-                                # verifico seu retorno
+
+                                # verifico o retorno
                                 if valueVariableId[0] != function[0]:
                                     errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna ' + valueVariableId[0].lower()])
-                                    break
 
-                    elif values[0] == 'NUM_INTEIRO':
+                            else:
+                                
+                                # pego a funcao
+                                valueVariableId = functionsPD.loc[functionsPD['nome'] == values[1]]
+                                
+                                # caso exista
+                                if len(valueVariableId) > 0:
+
+                                    # pego seu valor
+                                    valueVariableId = valueVariableId.values[0]
+                                    
+                                    # verifico seu retorno
+                                    if valueVariableId[0] != function[0]:
+                                        errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna ' + valueVariableId[0].lower()])
+                                        break
+
+                        elif values[0] == 'NUM_INTEIRO':
+                            
+                            # verifico o retorno
+                            if function[0] != 'INTEIRO':
+                                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna inteiro'])
+                                break
                         
-                        # verifico o retorno
-                        if function[0] != 'INTEIRO':
-                            errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna inteiro'])
-                            break
-                    
-                    elif values[0] == 'NUM_PONTO_FLUTUANTE':
-                        
-                        # verifico o retorno
-                        if function[0] != 'FLUTUANTE':
-                            errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna flutuante'])
-                            break
+                        elif values[0] == 'NUM_PONTO_FLUTUANTE':
+                            
+                            # verifico o retorno
+                            if function[0] != 'FLUTUANTE':
+                                errors.append(['ERRO', 'Erro: Função “' + function[1] + '” deveria retornar ' + function[0].lower() + ', mas retorna flutuante'])
+                                break
 
 def verifyFunctionsRepeat(dataPD, functionsPD, errors):
     
     # para cada funcao
     for funcoes in functionsPD.values:
 
-        # procuro recorrencias
-        dataSearch = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == funcoes[1])]
-        
-        # caso apenas encontre uma recorrencia
-        if len(dataSearch) == 1:
+        if funcoes[0]:
 
-            # e essa recorrencia nao é da funcao principal
-            if len(dataSearch.loc[dataSearch['valor'] == 'principal']) == 0:
-                errors.append(['AVISO', 'Aviso: Função “' + funcoes[1] + '” declarada, mas não utilizada'])
+            # procuro recorrencias
+            dataSearch = dataPD.loc[(dataPD['token'] == 'ID') & (dataPD['valor'] == funcoes[1])]
+            
+            # caso apenas encontre uma recorrencia
+            if len(dataSearch) == 1:
+
+                # e essa recorrencia nao é da funcao principal
+                if len(dataSearch.loc[dataSearch['valor'] == 'principal']) == 0:
+                    errors.append(['AVISO', 'Aviso: Função “' + funcoes[1] + '” declarada, mas não utilizada'])
 
 
 def verifyFunctionsLine(dataPD, functionsPD, errors):
@@ -411,6 +417,9 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
                         # caso nao ache nenhuma recorrencia
                         if tamFunctionPD == 0:
                             errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
+                            fErrorPd = pd.DataFrame([[None, functionName, None, None, None]], columns=['tipo', 'nome', 'parametros', 'linha_inicio', 'linha_fim'])
+                            functionsPD = pd.concat([functionsPD, fErrorPd])
+
                         else:
 
                             # linha inicio e fim
@@ -427,6 +436,8 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
                             
                             elif qtdParams < len(functionPD['parametros'].values[0]):
                                 errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
+    
+    return functionsPD
 
 def verifyVariables(dataPD, functionsPD, variablesPD, errors):
     verifyVariableUse(dataPD, variablesPD, errors)
@@ -903,7 +914,7 @@ def execute():
     variablesPD = createVariablePD(variables)
 
     # verificações
-    verifyFunctions(dataPD, functionsPD, variablesPD, errors)
+    functionsPD = verifyFunctions(dataPD, functionsPD, variablesPD, errors)
     verifyVariables(dataPD, functionsPD, variablesPD, errors)
     verifyAssignment(dataPD, functionsPD, variablesPD, errors)
 

@@ -392,7 +392,8 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                     expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='div_temp')
 
                 if 'i32' in str(expressao.type) and 'i32' in str(varLLVMDir.type):
-                    builder.store(expressao, varLLVMDir)
+                        builder.store(expressao, varLLVMDir)
+
                 elif 'float' in str(expressao.type) and 'float' in str(varLLVMDir.type):
                     builder.store(expressao, varLLVMDir)
                 elif 'i32' in str(expressao.type) and 'float' in str(varLLVMDir.type):
