@@ -32,7 +32,7 @@ def main():
     if 'ar' in argv:
         autoRun = True
 
-    semanticError, root, dataPD, functionsPD, variablesPD = sem.execute(argv[1], detailedLogs, showTree, showTables)
+    semanticError, root, dataPD, functionsPD, variablesPD = sem.execute(argv[1], detailedLogs, showTree, showTables, True)
 
     if not semanticError:
         modulo = gc.codeGenerator(argv[1], root, dataPD, functionsPD, variablesPD)

@@ -498,8 +498,8 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
                         
                         # caso nao ache nenhuma recorrencia
                         if tamFunctionPD == 0:
-                            # errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
-                            pass
+                            if not isGencode:
+                                errors.append(['ERRO', 'Erro: Chamada a função “' + functionName + '” que não foi declarada'])
                         else:
 
                             # linha inicio e fim
@@ -512,12 +512,12 @@ def verifyFunctionsLine(dataPD, functionsPD, errors):
 
                             # caso a quantidade de parametros seja maior/menor
                             if qtdParams > len(functionPD['parametros'].values[0]):
-                                # errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros maior que o declarado'])
-                                pass
+                                if not isGencode:
+                                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros maior que o declarado'])
                                 
                             elif qtdParams < len(functionPD['parametros'].values[0]):
-                                # errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
-                                pass
+                                if not isGencode:
+                                    errors.append(['ERRO', 'Erro: Chamada à função “' + functionName + '” com número de parâmetros menor que o declarado'])
 
 def verifyVariables(dataPD, functionsPD, variablesPD, errors):
     verifyVariableUse(dataPD, variablesPD, errors)
@@ -951,9 +951,9 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 
                     # caso nao encontre
                     if len(variableDir) == 0:
-                        # errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
+                        if not isGencode:
+                            errors.append(['ERRO', 'Erro: Variável “' + variableAssignmentDir[1] + '” não declarada'])
                         variableDirType = ''
-                        pass
 
                     else:
                         
@@ -966,8 +966,8 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                         
                         # caso os tipos sejam diferentes
                         if variableEsqType != variableDirType:
-                            # errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” ' + variableDirType.lower()])
-                            pass
+                            if not isGencode:
+                                errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + variableAssignmentDir[1] + '” ' + variableDirType.lower()])
             else:
 
                 if variableEsqType == 'INTEIRO':
@@ -980,8 +980,8 @@ def verifyAssignmentValues(dataPD, functionsPD, variablesPD, errors):
                 dataDir = assignmentDir.loc[assignmentDir['token'] == searchType]
                 
                 for err in dataDir.values:
-                    # errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + err[1] + '” ' + variableDirType.lower()])
-                    pass
+                    if not isGencode:
+                        errors.append(['AVISO', 'Aviso: Atribuição de tipos distintos “' +  dataEsq['valor'].values[0] + '” ' + variableEsqType.lower() + ' e “' + err[1] + '” ' + variableDirType.lower()])
                 
 def findEscopeVariable(variablePD, lineAtribuition):
 
@@ -990,7 +990,9 @@ def findEscopeVariable(variablePD, lineAtribuition):
     
     return escopeVar.values[position]
 
-def execute():
+def execute(gencode = False):
+    global isGencode
+    isGencode = gencode
 
     # pegar a lista com os tokens
     data = openFile()

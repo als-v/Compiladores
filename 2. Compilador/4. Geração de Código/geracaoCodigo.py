@@ -1493,4 +1493,5 @@ def codeGenerator(file, root, dataPD, functionsPD, variablesPD):
     
     declareVarGlobal(variablesPD)
     declareFunctions(dataPD, functionsPD)
+    
     return modulo

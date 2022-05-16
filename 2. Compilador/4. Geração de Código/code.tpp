@@ -1,6 +1,6 @@
-inteiro edois(inteiro: n)
+inteiro e_dois(inteiro: n)
     se n = 2 então
-        retorna(2)
+        retorna(1)
     fim
 
     retorna(0)
@@ -11,5 +11,5 @@ principal()
     
     leia(i)
 
-    escreva(edois(i))
+    escreva(e_dois(i))
 fim

@@ -133,8 +133,8 @@ def variablesVerify(dataPD, functionsPD, variablesPD, errors):
                     break
 
             if not found and id[1] not in variablesPD['nome'].values:
-                # errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
-                pass
+                if not isGencode:
+                    errors.append(['ERRO', 'Erro: Variável “' + id[1] + '” não declarada'])
 
 def verifyRead(dataPD, variablesPD, errors):
 
@@ -157,8 +157,8 @@ def verifyRead(dataPD, variablesPD, errors):
 
             # caso tenha uma funcao 'leia()' e a variavel nao esta inicializada 
             if ((len(dataLine.loc[dataLine['token'] == 'LEIA']) > 0) and (not init)):
-                # errors.append(['AVISO', 'Aviso: Variável “' + var[1] + '” declarada e não inicializada'])
-                pass
+                if not isGencode:
+                    errors.append(['AVISO', 'Aviso: Variável “' + var[1] + '” declarada e não inicializada'])
 
         # caso ela esteja inicializada, porem nao atualizada na tabela
         if init and not variablesPD.loc[variablesPD['nome'] == var[1]].values[0][4]:
@@ -192,18 +192,19 @@ def showErrors(errors):
 def showListPD(lista, label):
     print('\n{}:\n{}'.format(label, lista))
 
-def execute(file, detailedLogs, showTree, showTables):
+def execute(file, detailedLogs, showTree, showTables, gencode=False):
     
     # flags
-    global semanticError 
+    global semanticError, isGencode
     semanticError = False
+    isGencode = gencode
 
     runLex(file)
 
     root, isSintaticErr = sintatica.main(file, detailedLogs, showTree)
 
     if not isSintaticErr:
-        dataPD, functionsPD, variablesPD, errors = parser.execute()
+        dataPD, functionsPD, variablesPD, errors = parser.execute(isGencode)
         semanticAnalysis(dataPD, functionsPD, variablesPD, errors)
         showErrors(errors)
         
