@@ -107,6 +107,12 @@ def declareFunctions(dataPD, functionsPD):
         funcInit = funcLLVM.append_basic_block('entry')
         builder = ll.IRBuilder(funcInit)
 
+        for var in varModule:
+            if var[0] == func[1]:
+                param = builder.alloca(ll.IntType(32), name='param')
+                builder.store(var[3], param)
+                var[3] = param
+
         declareAll(builder, dataPD, func[1], func[3], func[4], functionsPD)
 
 def getLLVMFunction(funcName):
@@ -260,7 +266,7 @@ def returnLoadAttr(builder, qtdAttr, attr, function):
         # se for um id
         elif attr[idx][0] == 'ID':
             varAttrLLVM = getLLVMVar(attr[idx][1], function)
-           
+
             if None != varAttrLLVM:
                 tipoAttr = returnLLVMType(varAttrLLVM[1])
                 if str(varAttrLLVM[3].type) == 'i32*' or str(varAttrLLVM[3].type) == 'float*':
@@ -350,6 +356,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
     else:
         varLLVMDir = getLLVMVar(varEsq, function)[3]
 
+
     # quantidade de atributos e atributos
     qtdAttr = p.checkAttr(varDir)
     attr = listAttr(varDir)
@@ -364,6 +371,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
 
             if 'i32' in str(loadAttr[0].type) and 'i32' in str(varLLVMDir.type):
                 builder.store(loadAttr[0], varLLVMDir)
+
             elif 'i32' in str(loadAttr[0].type) and 'float' in str(varLLVMDir.type):
                 temp = builder.sitofp(loadAttr[0], ll.FloatType(), name="temp")
                 builder.store(temp, varLLVMDir)
@@ -392,6 +400,7 @@ def atribuition(builder, function, dataLine, line, functionsPD):
                     expressao = builder.sdiv(loadAttr[0], loadAttr[1], name='div_temp')
 
                 if 'i32' in str(expressao.type) and 'i32' in str(varLLVMDir.type):
+                        
                         builder.store(expressao, varLLVMDir)
 
                 elif 'float' in str(expressao.type) and 'float' in str(varLLVMDir.type):

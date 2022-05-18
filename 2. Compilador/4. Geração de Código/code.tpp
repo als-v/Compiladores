@@ -1,4 +1,6 @@
-inteiro e_dois(inteiro: n)
+inteiro e_sempre_dois(inteiro: n)
+    n := 2
+    escreva(n)
     se n = 2 então
         retorna(1)
     fim
@@ -11,5 +13,5 @@ principal()
     
     leia(i)
 
-    escreva(e_dois(i))
+    escreva(e_sempre_dois(i))
 fim
