@@ -115,7 +115,7 @@ def arrayVerifyRange(dataPD, variablesPD, errors):
                                 # passo pelo range do tamanho do indice da variavel (vetor ou matriz)
                                 for idx in range(len(var[5])):
                                     
-                                    print(dimensionsAttr.values[idx])
+                                    # print(dimensionsAttr.values[idx])
                                     # caso a dimensao esteja fora do intervalo
                                     if int(dimensionsAttr.values[idx][1]) > int(var[5][idx]):
                                         errors.append(['ERRO', 'Erro: Índice de array “' + var[1] + '” fora do intervalo (out of range)'])
