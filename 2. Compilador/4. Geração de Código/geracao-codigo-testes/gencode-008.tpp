@@ -1,5 +1,5 @@
-inteiro: A[10]
-inteiro: B[10]
+inteiro: A[1024]
+inteiro: B[1024]
 
 inteiro principal()
     inteiro: a
@@ -10,19 +10,19 @@ inteiro principal()
         leia(a)
         A[i] := a
         i := i + 1
-    até i = 10
+    até i = 1024
 
     i := 0
     repita
-        B[9 - i] := A[i]
+        B[1023 - i] := A[i]
         i := i + 1
-    até i = 10
+    até i = 1024
 
     i := 0
     repita
         escreva(B[i])
         i := i + 1
-    até i = 10    
+    até i = 1024    
 
     retorna(0)
 fim

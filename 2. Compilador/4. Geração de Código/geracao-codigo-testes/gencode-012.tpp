@@ -1,9 +1,6 @@
 inteiro: ano
 
-inteiro modulo(inteiro:a,b)
-	inteiro: numerador, denominador
-	numerador := a
-	denominador := b
+inteiro modulo(inteiro:numerador,denominador)
 	se (numerador < denominador) então
 	  retorna (numerador)
 	fim
@@ -17,7 +14,7 @@ fim
 
 inteiro principal()
    leia(ano)
-
+   
    se (modulo(ano,400) = 0) || (modulo(ano,4) = 0) && (!(modulo(ano,100) = 0)) então
       escreva(ano)
       escreva(1) {Verdadeiro}
