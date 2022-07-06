@@ -1,0 +1,12 @@
+*.ast.dot
+*.ast.png
+*.ast2.png
+
+geracao-codigo-testes/
+log-parser.txt
+log.txt
+saida.txt
+
+__pycache__/
+*.ll
+*.o
