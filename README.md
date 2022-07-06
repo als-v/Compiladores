@@ -1,2 +1,2 @@
-# Compiladores
-Repositório da disciplina de Compiladores
+# Repositório da Disciplina de Compiladores (2022/1)
+

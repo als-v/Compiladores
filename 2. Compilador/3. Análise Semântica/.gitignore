@@ -1,0 +1,10 @@
+*.ast.dot
+*.ast.png
+*.ast2.png
+
+./sintatica-testes/
+log-parser.txt
+log.txt
+saida.txt
+
+__pycache__/
